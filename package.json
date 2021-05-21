@@ -15,6 +15,7 @@
     "cors": "^2.8.5",
     "debug": "~2.6.9",
     "dotenv": "^8.2.0",
+    "ethers": "^5.1.4",
     "express": "~4.16.0",
     "express-jwt": "^5.3.1",
     "express-validator": "^6.2.0",
