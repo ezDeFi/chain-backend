@@ -3,6 +3,8 @@ const FarmController = require("../controllers/FarmController");
 
 var router = express.Router();
 
+router.get("/contract/:node", FarmController.contract);
+router.get("/query", FarmController.queryGlobal);
 router.get("/query/:address", FarmController.query);
 router.get("/withdraw/:address/:token/:amount", FarmController.withdraw);
 
