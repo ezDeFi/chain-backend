@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node ./bin/www",
     "dev": "nodemon ./bin/www",
+    "sync": "rsync -urtvL --delete -e ssh --exclude=node_modules --exclude=package-lock.json ./ lazarus:/root/src/sfarm-api/",
     "test": "nyc _mocha --timeout 10000 --exit --report lcovonly -- -R spec",
     "lint": "eslint --fix --config .eslintrc.json \"**/*.js\""
   },
