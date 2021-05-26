@@ -31,6 +31,10 @@ var app = express();
 if(process.env.NODE_ENV !== "test") {
 	app.use(logger("dev"));
 }
+
+// sets port 3000 to default or unless otherwise specified in the environment
+app.set('port', process.env.PORT || 6013);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());

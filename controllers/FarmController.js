@@ -5,30 +5,50 @@ var mongoose = require("mongoose");
 const { stripZeros } = require('@ethersproject/bytes');
 mongoose.set("useFindAndModify", false);
 
-const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_ENDPOINT)
-const SFarm = new ethers.Contract(process.env.SFARM_ADDRESS, require('../ABIs/SFarm.json').abi, provider)
+const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
+const contractABI = require('../ABIs/SFarm.json').abi
+const contractAddress = process.env.FARM
+const SFarm = new ethers.Contract(process.env.FARM, contractABI, provider)
 
-exports.queryGlobal = [
+exports.queryConfig = [
 	async function (req, res) {
 		try {
-			const ret = await SFarm.queryGlobal()
+			const { node } = req.params
+
+			const ret = await SFarm.queryConfig()
 			
-			const fromBlock = 0
+			const fromBlock = parseInt(process.env.FARM_GENESIS)
+			const toBlock = fromBlock + 5000
 			const tokenLogs = await provider.getLogs({
 				...SFarm.filters.AuthorizeToken(null, null),
 				fromBlock,
+				toBlock,
 			})
-			
+
 			// TODO: dedup tokenLogs by address
-			const stakedTokens = tokenLogs.filter(l => l.data == '0x'+'2'.padStart(64,'0')).map(l => '0x'+l.topics[1].substr(26))
+			const stakeTokens = tokenLogs.filter(l => l.data == '0x'+'2'.padStart(64,'0')).map(l => '0x'+l.topics[1].substr(26))
 			const receivingTokens = tokenLogs.filter(l => l.data == '0x'+'1'.padStart(64,'0')).map(l => '0x'+l.topics[1].substr(26))
 
+			// TODO: the first original admin is missing here
+			const adminLogs = await provider.getLogs({
+				...SFarm.filters.AuthorizeAdmin(null, null),
+				fromBlock,
+				toBlock,
+			})
+
+			const admins = adminLogs.filter(l => l.data == '0x'+'1'.padStart(64,'0')).map(l => '0x'+l.topics[1].substr(26))
+
 			return apiResponse.successResponseWithData(res, "Operation success", {
-				stakeTokensCount: ret.noStakeTokens.toString(),
-				totalStake: ret.totalStake.toString(),
-				totalValue: ret.totalValue.toString(),
-				stakedTokens,
+				stakeTokensCount: ret.stakeTokensCount_.toString(),
+				stakeTokens,
 				receivingTokens,
+				admins,
+				baseToken: ret.baseToken_,
+				earnToken: ret.earnToken_,
+				subsidyRate: ret.subsidyRate_.toString(),
+				subsidyRecipient: ret.subsidyRecipient_.toString(),
+				contractABI,
+				contractAddress,
 			});
 		} catch (err) {
 			console.error(err)
@@ -36,21 +56,6 @@ exports.queryGlobal = [
 		}
 	}
 ]
-
-exports.contract = [
-	async function (req, res) {
-		try {
-			// const { node } = req.params
-			// if (node != "127.0.0.1:8545") {
-			// 	return apiResponse.successResponseWithData(res, "Operation success", "");
-			// }
-			return apiResponse.successResponseWithData(res, "Operation success", process.env.SFARM_ADDRESS);
-		} catch (err) {
-			//throw error in json response with status 500. 
-			return apiResponse.ErrorResponse(res, err);
-		}
-	}
-];
 
 /**
  * Query
