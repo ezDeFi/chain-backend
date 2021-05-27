@@ -38,11 +38,21 @@ exports.queryConfig = [
 
 			const admins = adminLogs.filter(l => l.data == '0x'+'1'.padStart(64,'0')).map(l => '0x'+l.topics[1].substr(26))
 
+			// TODO: the first original farmer is missing here
+			const farmerLogs = await provider.getLogs({
+				...SFarm.filters.AuthorizeFarmer(null, null),
+				fromBlock,
+				toBlock,
+			})
+			
+			const farmers = farmerLogs.filter(l => l.data == '0x' + '1'.padStart(64, '0')).map(l => '0x' + l.topics[1].substr(26))
+
 			return apiResponse.successResponseWithData(res, "Operation success", {
 				stakeTokensCount: ret.stakeTokensCount_.toString(),
 				stakeTokens,
 				receivingTokens,
 				admins,
+				farmers,
 				baseToken: ret.baseToken_,
 				earnToken: ret.earnToken_,
 				subsidyRate: ret.subsidyRate_.toString(),
