@@ -1,12 +1,11 @@
 const { ethers } = require('ethers');
-
 const apiResponse = require("../helpers/apiResponse");
 var mongoose = require("mongoose");
-const { stripZeros } = require('@ethersproject/bytes');
 mongoose.set("useFindAndModify", false);
 
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
-const contractABI = require('../ABIs/SFarm.json').abi
+const contractABI = require('../ABIs/SFarm.json').abi;
+const { getAdminsLogs, getFarmerLogs, getTokenLogs } = require('../services/get-logs');
 const contractAddress = process.env.FARM
 const SFarm = new ethers.Contract(process.env.FARM, contractABI, provider)
 
@@ -18,41 +17,26 @@ exports.queryConfig = [
 			const ret = await SFarm.queryConfig()
 			
 			const fromBlock = parseInt(process.env.FARM_GENESIS)
-			const toBlock = fromBlock + 5000
-			const tokenLogs = await provider.getLogs({
-				...SFarm.filters.AuthorizeToken(null, null),
-				fromBlock,
-				toBlock,
-			})
-
-			// TODO: dedup tokenLogs by address
-			const stakeTokens = tokenLogs.filter(l => l.data == '0x'+'2'.padStart(64,'0')).map(l => '0x'+l.topics[1].substr(26))
-			const receivingTokens = tokenLogs.filter(l => l.data == '0x'+'1'.padStart(64,'0')).map(l => '0x'+l.topics[1].substr(26))
-
+			const toBlock = await provider.getBlockNumber()
 			// TODO: the first original admin is missing here
-			const adminLogs = await provider.getLogs({
-				...SFarm.filters.AuthorizeAdmin(null, null),
-				fromBlock,
-				toBlock,
-			})
-
-			const admins = adminLogs.filter(l => l.data == '0x'+'1'.padStart(64,'0')).map(l => '0x'+l.topics[1].substr(26))
-
-			// TODO: the first original farmer is missing here
-			const farmerLogs = await provider.getLogs({
-				...SFarm.filters.AuthorizeFarmer(null, null),
-				fromBlock,
-				toBlock,
+			const admins = await getAdminsLogs({
+				fromBlock, toBlock,
+			});
+			
+			const farmers = await getFarmerLogs({
+				fromBlock, toBlock,
+			});
+			
+			const {stakeTokens, receivingTokens} = await getTokenLogs({
+				fromBlock, toBlock,
 			})
 			
-			const farmers = farmerLogs.filter(l => l.data == '0x' + '1'.padStart(64, '0')).map(l => '0x' + l.topics[1].substr(26))
-
 			return apiResponse.successResponseWithData(res, "Operation success", {
 				stakeTokensCount: ret.stakeTokensCount_.toString(),
-				stakeTokens,
-				receivingTokens,
 				admins,
 				farmers,
+				stakeTokens,
+				receivingTokens,
 				baseToken: ret.baseToken_,
 				earnToken: ret.earnToken_,
 				subsidyRate: ret.subsidyRate_.toString(),
