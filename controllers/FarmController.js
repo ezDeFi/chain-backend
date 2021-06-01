@@ -10,6 +10,10 @@ const { getAdminsLogs, getFarmerLogs, getTokenLogs, getRouterLogs } = require('.
 const contractAddress = process.env.FARM
 const SFarm = new ethers.Contract(process.env.FARM, sfarmAbi, provider)
 
+const SWAP_FUNC_SIGNS = [
+	'38ed1739',	// swapExactTokensForTokens(uint256,uint256,address[],address,uint256)
+]
+
 exports.queryConfig = [
 	async function (req, res) {
 		try {
@@ -67,6 +71,29 @@ exports.query = [
 				stake: stake.toString(),
 				value: value.toString(),
 			});
+		} catch (err) {
+			//throw error in json response with status 500. 
+			return apiResponse.ErrorResponse(res, err);
+		}
+	}
+];
+
+/**
+ * Params for farmerExec
+ * 
+ * @returns {Object}
+ */
+ exports.farmerExec = [
+	async function (req, res) {
+		try {
+			const txParams = JSON.parse(decodeURIComponent(req.params.tx))
+			const { data } = txParams
+			const funcSign = data.substr(2, 8)
+			const resData = {}
+			if (SWAP_FUNC_SIGNS.includes(funcSign)) {
+				resData.receivingToken = '0x' + data.substr(data.length-40)
+			}
+			return apiResponse.successResponseWithData(res, "Operation success", resData);
 		} catch (err) {
 			//throw error in json response with status 500. 
 			return apiResponse.ErrorResponse(res, err);

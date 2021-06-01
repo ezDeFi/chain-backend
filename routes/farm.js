@@ -5,6 +5,7 @@ var router = express.Router();
 
 router.get("/queryConfig/:node?", FarmController.queryConfig);
 router.get("/query/:address", FarmController.query);
+router.get("/farmerExec/:tx", FarmController.farmerExec)
 router.get("/withdraw/:address/:token/:amount", FarmController.withdraw);
 
 module.exports = router;
