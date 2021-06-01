@@ -160,9 +160,9 @@ exports.getTokenLogs = async ({
         .map(([address, authMode]) => {
             return {
                 address,
-                authMode: Number(authMode),
+                authMode: parseInt(authMode).toString(),
             }
         })
-        .filter(m => !!m.authMode)
+        .filter(m => m.authMode !== '0')
         .value();
 }
