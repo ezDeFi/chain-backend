@@ -4,11 +4,10 @@ var mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
-const sfarmAbi = require('../ABIs/SFarm.json').abi;
-const timelockAbi = require('../ABIs/Timelock.json').abi;
+const contractABI = require('../ABIs/SFarm.json').abi;
 const { getAdminsLogs, getFarmerLogs, getTokenLogs, getRouterLogs } = require('../services/get-logs');
 const contractAddress = process.env.FARM
-const SFarm = new ethers.Contract(process.env.FARM, sfarmAbi, provider)
+const SFarm = new ethers.Contract(process.env.FARM, contractABI, provider)
 
 const SWAP_FUNC_SIGNS = [
 	'38ed1739',	// swapExactTokensForTokens(uint256,uint256,address[],address,uint256)
@@ -46,8 +45,7 @@ exports.queryConfig = [
 				earnToken: ret.earnToken_,
 				subsidyRate: ret.subsidyRate_.toString(),
 				subsidyRecipient: ret.subsidyRecipient_.toString(),
-				sfarmAbi,
-				timelockAbi,
+				contractABI,
 				contractAddress,
 			});
 		} catch (err) {
