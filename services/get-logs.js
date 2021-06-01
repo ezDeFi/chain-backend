@@ -43,7 +43,7 @@ exports.getAdminsLogs = async ({
     const adminLogs = await Bluebird.map(
         blocks,
         ({ from, to }, i) => {
-            const fn = i - 1 === blocks.length ?
+            const fn = i + 1 === blocks.length ?
                 _getAdminLogs : memoize(_getAdminLogs, '_getAdminLogs')
             return fn({ from, to })
         }, { concurrency: 10 },
@@ -78,7 +78,7 @@ exports.getFarmerLogs = async ({
 }) => {
     const blocks = getChunks(fromBlock, toBlock, 5000);
     const farmerLogs = await Bluebird.map(blocks, ({ from, to }, i) => {
-        const fn = i - 1 === blocks.length ?
+        const fn = i + 1 === blocks.length ?
             _getFarmerLogs : memoize(_getFarmerLogs, '_getFarmerLogs')
         return fn({ from, to })
     }, { concurrency: 10 }).then(_.flatten);
@@ -111,7 +111,7 @@ exports.getRouterLogs = async ({
 }) => {
     const blocks = getChunks(fromBlock, toBlock, 5000);
     const routerLogs = await Bluebird.map(blocks, ({ from, to }, i) => {
-        const fn = i - 1 === blocks.length ?
+        const fn = i + 1 === blocks.length ?
             _getRouterLogs : memoize(_getRouterLogs, '_getRouterLogs')
         return fn({ from, to })
     }, { concurrency: 10 }).then(_.flatten);
@@ -144,7 +144,7 @@ exports.getTokenLogs = async ({
 }) => {
     const blocks = getChunks(fromBlock, toBlock, 5000);
     const tokenLogs = await Bluebird.map(blocks, ({ from, to }, i) => {
-        const fn = i - 1 === blocks.length ?
+        const fn = i + 1 === blocks.length ?
             _getTokenLogs : memoize(_getTokenLogs, '_getTokenLogs')
         return fn({ from, to })
     }, { concurrency: 10 }).then(_.flatten);
