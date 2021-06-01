@@ -4,6 +4,7 @@ var Schema = mongoose.Schema;
 
 var MemoizeSchema = new Schema({
     key: {
+        index: true,
         type: String,
         required: true,
     },
