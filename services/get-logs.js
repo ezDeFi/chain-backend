@@ -49,16 +49,12 @@ exports.getAdminsLogs = async ({
         }, { concurrency: 10 },
     ).then(_.flatten);
     
-    return Object
-        .entries(
-            adminLogs
-                .map(({ data, topics }) => ({
-                    ['0x' + topics[1].substr(26)]: data,
-                }))
-                .reduce((a, b) => ({ ...a, ...b }), {}),
-        )
-        .filter(([_key, value]) => Number(value) === 1)
-        .map(([key]) => key);
+    return _.pickBy(adminLogs
+        .map(({ data, topics }) => ({
+            ['0x' + topics[1].substr(26)]: parseInt(data),
+        }))
+        .reduce((a, b) => ({ ...a, ...b }), {})
+    )
 };
 
 const _getFarmerLogs = async ({ from, to }) => {
@@ -83,15 +79,12 @@ exports.getFarmerLogs = async ({
         return fn({ from, to })
     }, { concurrency: 10 }).then(_.flatten);
 
-    return Object
-        .entries(farmerLogs
-            .map(({ data, topics }) => ({
-                ['0x' + topics[1].substr(26)]: data,
-            }))
-            .reduce((a, b) => ({ ...a, ...b }), {}),
-        )
-        .filter(([_key, value]) => Number(value) === 1)
-        .map(([key]) => key);
+    return _.pickBy(farmerLogs
+        .map(({ data, topics }) => ({
+            ['0x' + topics[1].substr(26)]: parseInt(data),
+        }))
+        .reduce((a, b) => ({ ...a, ...b }), {})
+    )
 };
 
 const _getRouterLogs = async ({ from, to }) => {
@@ -116,15 +109,12 @@ exports.getRouterLogs = async ({
         return fn({ from, to })
     }, { concurrency: 10 }).then(_.flatten);
 
-    return Object
-        .entries(routerLogs
-            .map(({ data, topics }) => ({
-                ['0x' + topics[1].substr(26)]: data,
-            }))
-            .reduce((a, b) => ({ ...a, ...b }), {}),
-        )
-        .filter(([_key, value]) => Number(value) === 1)
-        .map(([key]) => key);
+    return _.pickBy(routerLogs
+        .map(({ data, topics }) => ({
+            ['0x' + topics[1].substr(26)]: parseInt(data),
+        }))
+        .reduce((a, b) => ({ ...a, ...b }), {})
+    )
 }
 
 const _getTokenLogs = async ({ from, to }) => {
@@ -149,20 +139,10 @@ exports.getTokenLogs = async ({
         return fn({ from, to })
     }, { concurrency: 10 }).then(_.flatten);
 
-    const groupedTokenLogs = tokenLogs
+    return _.pickBy(tokenLogs
         .map(({ data, topics }) => ({
-            ['0x' + topics[1].substr(26)]: data,
+            ['0x' + topics[1].substr(26)]: parseInt(data),
         }))
-        .reduce((a, b) => ({ ...a, ...b }), {});
-    
-    return _(groupedTokenLogs)
-        .entries()
-        .map(([address, authMode]) => {
-            return {
-                address,
-                authMode: parseInt(authMode).toString(),
-            }
-        })
-        .filter(m => m.authMode !== '0')
-        .value();
+        .reduce((a, b) => ({ ...a, ...b }), {})
+    )
 }
