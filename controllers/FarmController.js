@@ -4,10 +4,11 @@ var mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
-const contractABI = require('../ABIs/SFarm.json').abi;
-const { getAdminsLogs, getFarmerLogs, getTokenLogs } = require('../services/get-logs');
+const sfarmAbi = require('../ABIs/SFarm.json').abi;
+const timelockAbi = require('../ABIs/Timelock.json').abi;
+const { getAdminsLogs, getFarmerLogs, getTokenLogs, getRouterLogs } = require('../services/get-logs');
 const contractAddress = process.env.FARM
-const SFarm = new ethers.Contract(process.env.FARM, contractABI, provider)
+const SFarm = new ethers.Contract(process.env.FARM, sfarmAbi, provider)
 
 exports.queryConfig = [
 	async function (req, res) {
@@ -18,30 +19,31 @@ exports.queryConfig = [
 			
 			const fromBlock = parseInt(process.env.FARM_GENESIS)
 			const toBlock = await provider.getBlockNumber()
+			
+			const [admins, farmers, tokens, routers] = await Promise.all(
+				[
 			// TODO: the first original admin is missing here
-			const admins = await getAdminsLogs({
-				fromBlock, toBlock,
-			});
+					getAdminsLogs({fromBlock, toBlock}),
+					getFarmerLogs({fromBlock, toBlock}),
+					getTokenLogs({fromBlock, toBlock}),
+					getRouterLogs({fromBlock, toBlock})
+				],
+			);
 			
-			const farmers = await getFarmerLogs({
-				fromBlock, toBlock,
-			});
-			
-			const {stakeTokens, receivingTokens} = await getTokenLogs({
-				fromBlock, toBlock,
-			})
 			
 			return apiResponse.successResponseWithData(res, "Operation success", {
 				stakeTokensCount: ret.stakeTokensCount_.toString(),
 				admins,
 				farmers,
-				stakeTokens,
-				receivingTokens,
+				tokens,
+				routers,
+				delay: ret.delay_.toString(),
 				baseToken: ret.baseToken_,
 				earnToken: ret.earnToken_,
 				subsidyRate: ret.subsidyRate_.toString(),
 				subsidyRecipient: ret.subsidyRecipient_.toString(),
-				contractABI,
+				sfarmAbi,
+				timelockAbi,
 				contractAddress,
 			});
 		} catch (err) {
