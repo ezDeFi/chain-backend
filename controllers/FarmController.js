@@ -5,12 +5,18 @@ mongoose.set("useFindAndModify", false);
 
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
 const contractABI = require('../ABIs/SFarm.json').abi;
+const routerABI = require('../ABIs/UniswapV2Router01.json').abi;
+const factoryABI = require('../ABIs/UniswapV2Factory.json').abi;
 const { getAdminsLogs, getFarmerLogs, getTokenLogs, getRouterLogs } = require('../services/get-logs');
 const contractAddress = process.env.FARM
 const SFarm = new ethers.Contract(process.env.FARM, contractABI, provider)
 
 const SWAP_FUNC_SIGNS = [
 	'38ed1739',	// swapExactTokensForTokens(uint256,uint256,address[],address,uint256)
+]
+
+const ADD_LIQUIDITY_SIGNS = [
+	'e8e33700',	// addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)
 ]
 
 exports.queryConfig = [
@@ -85,11 +91,23 @@ exports.query = [
 	async function (req, res) {
 		try {
 			const txParams = JSON.parse(decodeURIComponent(req.params.tx))
-			const { data } = txParams
+			const { data, to } = txParams
 			const funcSign = data.substr(2, 8)
 			const resData = {}
 			if (SWAP_FUNC_SIGNS.includes(funcSign)) {
 				resData.receivingToken = '0x' + data.substr(data.length-40)
+			} else if (ADD_LIQUIDITY_SIGNS.includes(funcSign)) {
+				// pair = IRouter(txParams.to).factory().getPair(tokenA, tokenB)
+				const tokenA = '0x'+data.substr(10+24, 40)
+				const tokenB = '0x'+data.substr(10+24+40+24, 40)
+				const router = new ethers.Contract(to, routerABI, provider)
+				const factoryAddress = await router.factory()	// cache router => factory
+				const factory = new ethers.Contract(factoryAddress, factoryABI, provider)
+				const pairAddress = await factory.getPair(tokenA, tokenB)	// cache (factory,tokenA,tokenB) => pair
+				resData.receivingToken = pairAddress
+			} else {
+				console.error(txParams)
+				return apiResponse.ErrorResponse(res, 'UNIMPLEMENTED');
 			}
 			return apiResponse.successResponseWithData(res, "Operation success", resData);
 		} catch (err) {
