@@ -3,6 +3,8 @@ const apiResponse = require("../helpers/apiResponse");
 var mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
 const contractABI = require('../ABIs/SFarm.json').abi;
 const routerABI = require('../ABIs/UniswapV2Router01.json').abi;
@@ -17,6 +19,11 @@ const SWAP_FUNC_SIGNS = [
 
 const ADD_LIQUIDITY_SIGNS = [
 	'e8e33700',	// addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)
+]
+
+const DEPOSIT_SIGNS = [
+	'e2bbb158', // deposit(uint256,uint256)
+	'441a3e70', // withdraw(uint256,uint256)
 ]
 
 exports.queryConfig = [
@@ -105,6 +112,9 @@ exports.query = [
 				const factory = new ethers.Contract(factoryAddress, factoryABI, provider)
 				const pairAddress = await factory.getPair(tokenA, tokenB)	// cache (factory,tokenA,tokenB) => pair
 				resData.receivingToken = pairAddress
+			} else if (DEPOSIT_SIGNS.includes(funcSign)) {
+				resData.receivingToken = ZERO_ADDRESS
+				// TODO check to is ROUTER_OWNERSHIP_PRESERVED
 			} else {
 				console.error(txParams)
 				return apiResponse.ErrorResponse(res, 'UNIMPLEMENTED');
