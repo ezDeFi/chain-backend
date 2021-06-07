@@ -9,7 +9,7 @@ const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
 const contractABI = require('../ABIs/SFarm.json').abi;
 const routerABI = require('../ABIs/UniswapV2Router01.json').abi;
 const factoryABI = require('../ABIs/UniswapV2Factory.json').abi;
-const { getAdminsLogs, getFarmerLogs, getTokenLogs, getRouterLogs } = require('../services/get-logs');
+const { getAdminLogsUsingCache, getFarmerLogsUsingCache, getTokenLogsUsingCache, getRouterLogsUsingCache } = require('../services/state-cache');
 const contractAddress = process.env.FARM
 const SFarm = new ethers.Contract(process.env.FARM, contractABI, provider)
 
@@ -39,10 +39,10 @@ exports.queryConfig = [
 			const [admins, farmers, tokens, routers] = await Promise.all(
 				[
 			// TODO: the first original admin is missing here
-					getAdminsLogs({fromBlock, toBlock}),
-					getFarmerLogs({fromBlock, toBlock}),
-					getTokenLogs({fromBlock, toBlock}),
-					getRouterLogs({fromBlock, toBlock})
+					getAdminLogsUsingCache({fromBlock, toBlock}),
+					getFarmerLogsUsingCache({fromBlock, toBlock}),
+					getTokenLogsUsingCache({fromBlock, toBlock}),
+					getRouterLogsUsingCache({fromBlock, toBlock})
 				],
 			);
 			
