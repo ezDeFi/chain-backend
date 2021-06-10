@@ -1,137 +1,25 @@
-const _ = require('lodash')
 const { ethers } = require('ethers')
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
-const contractABI = require('../ABIs/SFarm.json').abi
-const LogsStateModel = require('../models/LogsStateModel')
-const mongoose = require("mongoose");
-const { delay } = require('bluebird')
+const path = require("path")
 const { updateLogsState } = require('../services/update-logs-state')
+const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
-const SFarm = new ethers.Contract(process.env.FARM, contractABI, provider)
+const statePath = "../states"
+const configs = {}
 
-const processMaskLogs = ({ logs }) => {
-    return _.pickBy(logs
-        .map(({ data, topics }) => ({
-            ['0x' + topics[1].substr(26)]: parseInt(data),
-        }))
-        .reduce((a, b) => ({ ...a, ...b }), {})
-    )
-}
+const normalizedPath = path.join(__dirname, statePath);
+require("fs").readdirSync(normalizedPath).forEach(file => {
+    const key = file.split('.').slice(0, -1).join('.')
+    configs[key] = require(`${normalizedPath}/${key}`)
+    configs[key].key = key
+})
 
-const processAdminLogs = async ({ logs }) => {
-    const stateValue = processMaskLogs({
-        logs: logs.filter(log => log.topics[0] === SFarm.filters.AuthorizeAdmin(null, null).topics[0])
-    });
-
-    const lastState = await LogsStateModel.findOne({
-        key: 'admins',
-    }).lean();
-    
-    await LogsStateModel.updateOne(
-        { key: 'admins' },
-        {
-            value: {
-                ...(lastState && lastState.value),
-                ...stateValue,
-            }
-        },
-        { upsert: true },
-    );
-};
-
-const processFarmerLogs = async ({ logs }) => {
-    const stateValue = processMaskLogs({
-        logs: logs.filter(log => log.topics[0] === SFarm.filters.AuthorizeFarmer(null, null).topics[0])
-    })
-
-    const lastState = await LogsStateModel.findOne({
-        key: 'farmers',
-    }).lean();
-
-    await LogsStateModel.updateOne(
-        { key: 'farmers' },
-        {
-            value: {
-                ...(lastState && lastState.value),
-                ...stateValue,
-            }
-        },
-        { upsert: true },
-    );
-};
-
-const processRouterLogs = async ({ logs }) => {
-    const stateValue = processMaskLogs({
-        logs: logs.filter(log => log.topics[0] === SFarm.filters.AuthorizeRouter(null, null).topics[0])
-    })
-
-    const lastState = await LogsStateModel.findOne({
-        key: 'routers',
-    }).lean();
-
-    await LogsStateModel.updateOne(
-        { key: 'routers' },
-        {
-            value: {
-                ...(lastState && lastState.value),
-                ...stateValue,
-            }
-        },
-        { upsert: true },
-    );
-}
-
-const processTokenLogs = async ({ logs }) => {
-    const stateValue = processMaskLogs({
-        logs: logs.filter(log => log.topics[0] === SFarm.filters.AuthorizeToken(null, null).topics[0])
-    })
-
-    const lastState = await LogsStateModel.findOne({
-        key: 'tokens',
-    }).lean();
-
-    await LogsStateModel.updateOne(
-        { key: 'tokens' },
-        {
-            value: {
-                ...(lastState && lastState.value),
-                ...stateValue,
-            }
-        },
-        { upsert: true },
-    );
-}
-
-const configs = {
-    admins: {
-        getFilter: async () => ({
-            ...SFarm.filters.AuthorizeAdmin(null, null),
-        }),
-        processLogs: processAdminLogs,
-    },
-    routers: {
-        getFilter: async () => ({
-            ...SFarm.filters.AuthorizeRouter(null, null),
-        }),
-        processLogs: processRouterLogs,
-    },
-    farmers: {
-        getFilter: async () => ({
-            ...SFarm.filters.AuthorizeFarmer(null, null),
-        }),
-        processLogs: processFarmerLogs,
-    },
-    tokens: {
-        getFilter: async () => ({
-            ...SFarm.filters.AuthorizeToken(null, null),
-        }),
-        processLogs: processTokenLogs,
-    },
-};
+console.log('State configs', configs)
 
 let updating = false;
-provider.on('block', async () => {
+provider.on('block', async blockNumber => {
+    console.log('New block', blockNumber)
     if (updating === true) {
         return;
     }

@@ -63,8 +63,8 @@ const updateLogsState = async ({ configs }) => {
     }).lean().then(m => m && m.value);
 
     if (notSyncedConfig && lastSyncedBlock) {
-        const filter = await notSyncedConfig.getFilter();
-        const topics = filter.topics;
+        const filter = await notSyncedConfig.getFilters();
+        const topics = filter.map(f => f.topics);
         const fromBlock = filter.fromBlock || minBlock;
         const toBlock = lastSyncedBlock;
         const blocks = getChunks(fromBlock, toBlock, 1000);
@@ -84,9 +84,10 @@ const updateLogsState = async ({ configs }) => {
     }
 
     const topics = [
-        await Bluebird.map(configsArray, async config => {
-            return config.getFilter().then(m => m.topics)
-        }).then(_.flatten),
+        _.flatten(await Bluebird
+            .map(configsArray, config => config.getFilters())
+            .map(m => m.topics)
+        ),
     ];
 
     const blocks = getChunks(uncachedChunk.fromBlock, uncachedChunk.toBlock, 1000);
