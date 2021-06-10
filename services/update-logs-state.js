@@ -63,15 +63,15 @@ const updateLogsState = async ({ configs }) => {
         !config.stateExists
     );
 
-    const latestCachedBlock = await ConfigModel.findOne({
-        key: 'latestCachedBlock'
+    const lastSyncedBlock = await ConfigModel.findOne({
+        key: 'lastSyncedBlock'
     }).lean().then(m => m && m.value);
 
-    if (notSyncedConfig && latestCachedBlock) {
+    if (notSyncedConfig && lastSyncedBlock) {
         const filter = await notSyncedConfig.getFilter();
         const topics = filter.topics;
         const fromBlock = filter.fromBlock || minBlock;
-        const toBlock = latestCachedBlock;
+        const toBlock = lastSyncedBlock;
         const blocks = getChunks(fromBlock, toBlock, 1000);
         const logs = await Bluebird.map(blocks, ({ from: fromBlock, to: toBlock }, i) => {
             const fn = i + 1 === blocks.length ?
@@ -84,7 +84,7 @@ const updateLogsState = async ({ configs }) => {
     const toBlock = await provider.getBlockNumber();
 
     const uncachedChunk = {
-        fromBlock: latestCachedBlock ? latestCachedBlock + 1 : minBlock,
+        fromBlock: lastSyncedBlock ? lastSyncedBlock + 1 : minBlock,
         toBlock
     }
 
@@ -102,7 +102,7 @@ const updateLogsState = async ({ configs }) => {
     }, { concurrency: 10 }).then(_.flatten);
 
     await ConfigModel.updateOne(
-        { key: 'latestCachedBlock' },
+        { key: 'lastSyncedBlock' },
         { value: toBlock },
         { upsert: true },
     )
