@@ -130,14 +130,17 @@ const configs = {
     },
 };
 
-(async () => {
-    while (true) {
-        try {
-            await updateLogsState({ configs })
-            await delay(3000)
-        } catch (error) {
-            console.error(error.message)
-            await delay(3000)
-        }
+let updating = false;
+provider.on('block', async () => {
+    if (updating === true) {
+        return;
     }
-})()
+    try {
+        updating = true;
+        await updateLogsState({ configs })
+    } catch (error) {
+        console.error(error.message)
+    } finally {
+        updating = false;
+    }
+})
