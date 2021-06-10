@@ -25,7 +25,7 @@ provider.on('block', async blockNumber => {
     }
     try {
         updating = true;
-        await updateLogsState({ configs })
+        await updateLogsState({ configs, toBlock: blockNumber })
     } catch (error) {
         console.error(error.message)
     } finally {

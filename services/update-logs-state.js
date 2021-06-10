@@ -37,7 +37,7 @@ const _getLogs = async ({ fromBlock, toBlock, topics }) => {
     return logs;
 }
 
-const updateLogsState = async ({ configs }) => {
+const updateLogsState = async ({ configs, toBlock }) => {
     const configsArray = await Promise.resolve(
         _.entries(configs).map(([key, value]) => {
             return {
@@ -76,7 +76,9 @@ const updateLogsState = async ({ configs }) => {
         return await notSyncedConfig.processLogs({ logs });
     }
 
-    const toBlock = await provider.getBlockNumber();
+    if (!toBlock) {
+        toBlock = await provider.getBlockNumber();
+    }
 
     const uncachedChunk = {
         fromBlock: lastSyncedBlock ? lastSyncedBlock + 1 : minBlock,
