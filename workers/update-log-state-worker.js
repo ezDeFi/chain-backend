@@ -1,15 +1,8 @@
-const Bluebird = require('bluebird')
 const _ = require('lodash')
 const { ethers } = require('ethers')
-const minBlock = parseInt(process.env.FARM_GENESIS)
-const contractAddress = process.env.FARM
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
 const contractABI = require('../ABIs/SFarm.json').abi
-const { memoize } = require('../services/memoize')
-const ConfigModel = require("../models/ConfigModel");
 const LogsStateModel = require('../models/LogsStateModel')
-const Queue = require('promise-queue')
-const queue = new Queue(1, Infinity)
 const mongoose = require("mongoose");
 const { delay } = require('bluebird')
 const { updateLogsState } = require('../services/update-logs-state')
