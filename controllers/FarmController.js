@@ -1,5 +1,6 @@
 const { ethers } = require('ethers');
 const apiResponse = require("../helpers/apiResponse");
+const LogsStateModel = require('../models/LogsStateModel')
 var mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
@@ -9,7 +10,7 @@ const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
 const contractABI = require('../ABIs/SFarm.json').abi;
 const routerABI = require('../ABIs/UniswapV2Router01.json').abi;
 const factoryABI = require('../ABIs/UniswapV2Factory.json').abi;
-const { getAdminLogsUsingCache, getFarmerLogsUsingCache, getTokenLogsUsingCache, getRouterLogsUsingCache } = require('../services/state-cache');
+const _ = require('lodash');
 const contractAddress = process.env.FARM
 const SFarm = new ethers.Contract(process.env.FARM, contractABI, provider)
 
@@ -29,30 +30,16 @@ const DEPOSIT_SIGNS = [
 exports.queryConfig = [
 	async function (req, res) {
 		try {
-			const { node } = req.params
-
 			const ret = await SFarm.queryConfig()
-			
-			const fromBlock = parseInt(process.env.FARM_GENESIS)
-			const toBlock = await provider.getBlockNumber()
-			
-			const [admins, farmers, tokens, routers] = await Promise.all(
-				[
-			// TODO: the first original admin is missing here
-					getAdminLogsUsingCache({fromBlock, toBlock}),
-					getFarmerLogsUsingCache({fromBlock, toBlock}),
-					getTokenLogsUsingCache({fromBlock, toBlock}),
-					getRouterLogsUsingCache({fromBlock, toBlock})
-				],
-			);
-			
+			const states = await LogsStateModel.find({
+				key: { $in: ['admins', 'farmers', 'tokens', 'routers'] },
+			}).lean();
 			
 			return apiResponse.successResponseWithData(res, "Operation success", {
+				..._(states)
+					.map(state => ({ [state.key]: state.value }))
+					.reduce((a, b) => ({ ...a, ...b })),
 				stakeTokensCount: ret.stakeTokensCount_.toString(),
-				admins,
-				farmers,
-				tokens,
-				routers,
 				delay: ret.delay_.toString(),
 				baseToken: ret.baseToken_,
 				earnToken: ret.earnToken_,
