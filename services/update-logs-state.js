@@ -1,7 +1,7 @@
 const Bluebird = require('bluebird')
 const _ = require('lodash')
 const { ethers } = require('ethers')
-const minBlock = parseInt(process.env.FARM_GENESIS)
+const FARM_GENESIS = parseInt(process.env.FARM_GENESIS)
 const provider = new ethers.providers.JsonRpcProvider({
 	timeout: 3000,
 	url: process.env.RPC,
@@ -113,16 +113,21 @@ const processNewState = async ({ configs, head }) => {
     let fromBlock = 1 + await ConfigModel.findOne({
         key: 'lastSyncedBlock'
     }).lean().then(m => m && m.value);
+    if (fromBlock < FARM_GENESIS) {
+        fromBlock = FARM_GENESIS
+    }
 
     while (fromBlock < head) {
         const requests = _.flatten(configsArray.map(c => c.getRequests()))
 
         const headRequests = requests.filter(r => !r.lo)
+
+
+        if (fromBlock + CHUNK_SIZE - 1 < head) {
+            var toBlock = fromBlock + CHUNK_SIZE - 1
+        }
+
         const topics = mergeTopics(headRequests.map(r => r.topics))
-
-        const toBlock = Math.min(head, fromBlock + CHUNK_SIZE - 1)
-        const pastRange = toBlock === head
-
         const logs = await _getLogs({ fromBlock, toBlock, topics })
 
         if (!logs) {
@@ -130,8 +135,13 @@ const processNewState = async ({ configs, head }) => {
         }
 
         await Bluebird.map(configsArray, async config => {
-            await config.processLogs({ logs, fromBlock, toBlock, pastRange });
+            await config.processLogs({ logs, fromBlock, toBlock });
         });
+
+        if (!toBlock) {
+            // catch the best head
+            var toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
+        }
 
         await ConfigModel.updateOne(
             { key: 'lastSyncedBlock' },
