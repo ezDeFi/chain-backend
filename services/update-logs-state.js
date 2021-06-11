@@ -2,12 +2,17 @@ const Bluebird = require('bluebird')
 const _ = require('lodash')
 const { ethers } = require('ethers')
 const minBlock = parseInt(process.env.FARM_GENESIS)
-const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
-const { memoize } = require('../services/memoize')
+const provider = new ethers.providers.JsonRpcProvider({
+	timeout: 3000,
+	url: process.env.RPC,
+})
 const ConfigModel = require("../models/ConfigModel");
 const LogsStateModel = require('../models/LogsStateModel')
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
+
+const TARGET_LOGS_PER_CHUNK = 500;
+let CHUNK_SIZE = 30 // 1000
 
 const getChunks = (from, to, chunkSize) => {
     const roundedFrom = Math.floor(from / chunkSize) * chunkSize
@@ -26,18 +31,69 @@ const getChunks = (from, to, chunkSize) => {
 }
 
 const _getLogs = async ({ fromBlock, toBlock, topics }) => {
-    const logs = await provider.getLogs({
-        topics,
-        fromBlock,
-        toBlock,
-    });
-    if (!Array.isArray(logs)) {
-        throw new Error(JSON.stringify(logs));
+    console.error('_getLogs', fromBlock, toBlock, topics)
+    try {
+        const logs = await provider.getLogs({
+            topics,
+            fromBlock,
+            toBlock,
+        });
+        if (!Array.isArray(logs)) {
+            throw new Error(JSON.stringify(logs));
+        }
+        if (logs.length < TARGET_LOGS_PER_CHUNK) {
+            if (toBlock - fromBlock >= CHUNK_SIZE - 1) {
+                CHUNK_SIZE = CHUNK_SIZE <= 1 ? 2 : CHUNK_SIZE = Math.floor(CHUNK_SIZE * 5 / 3)
+                console.error('getLogs: CHUNK_SIZE increased to', CHUNK_SIZE)
+            }
+        }
+        return logs;
+    } catch(err) {
+        if (err.code != 'TIMEOUT') {
+            throw err
+        }
+        if (CHUNK_SIZE > 1) {
+            CHUNK_SIZE >>= 1
+        }
+        console.error('getLogs: CHUNK_SIZE decreased to', CHUNK_SIZE)
     }
-    return logs;
 }
 
-const updateLogsState = async ({ configs, toBlock }) => {
+const mergeTopics = (topics) => {
+    return topics
+        .map(ts => ts.map(t => _.isArray(t) ? t : [t])) // wrap all single topic to array
+        .reduce((topics, ts, it) => {
+            ts.forEach((t, i) => {
+                t.forEach(ti => {
+                    if (!topics[i].includes(ti)) {
+                        topics[i].push(ti)
+                    }
+                })
+            })
+            return topics
+        })
+}
+
+function getFirstForwardRangeLogs(pastRequests) {
+    const forwardLos = pastRequests
+        .filter(r => !r.backward)
+        .map(r => r.lo)
+        .sort((a, b) => a - b)
+    const fLo = forwardLos[0]
+    const fHi = Math.min(forwardLos.find(a => a > fLo), fLo + CHUNK_SIZE)
+
+    if (fLo >= fHi) {
+        return undefined
+    }
+
+    const forwardRequests = pastRequests
+        .filter(r => r.lo < fHi && r.hi > fLo)
+
+    const topics = mergeTopics(forwardRequests.map(r => r.topics))
+    return _getLogs({ fromBlock: fLo, toBlock: fHi-1, topics })
+}
+
+const processNewState = async ({ configs, head }) => {
     const configsArray = await Promise.resolve(
         _.entries(configs).map(([key, value]) => {
             return {
@@ -54,60 +110,38 @@ const updateLogsState = async ({ configs, toBlock }) => {
         })
     });
 
-    const notSyncedConfig = configsArray.find(config =>
-        !config.stateExists
-    );
-
-    const lastSyncedBlock = await ConfigModel.findOne({
+    let fromBlock = 1 + await ConfigModel.findOne({
         key: 'lastSyncedBlock'
     }).lean().then(m => m && m.value);
 
-    if (notSyncedConfig && lastSyncedBlock) {
-        const filter = await notSyncedConfig.getFilters();
-        const topics = filter.map(f => f.topics);
-        const fromBlock = filter.fromBlock || minBlock;
-        const toBlock = lastSyncedBlock;
-        const blocks = getChunks(fromBlock, toBlock, 1000);
-        const logs = await Bluebird.map(blocks, ({ from: fromBlock, to: toBlock }, i) => {
-            const fn = i + 1 === blocks.length ?
-                _getLogs : memoize(_getLogs, '_getAllLogs')
-            return fn({ fromBlock, toBlock, topics })
-        }, { concurrency: 10 }).then(_.flatten);
-        return await notSyncedConfig.processLogs({ logs });
+    while (fromBlock < head) {
+        const requests = _.flatten(configsArray.map(c => c.getRequests()))
+
+        const headRequests = requests.filter(r => !r.lo)
+        const topics = mergeTopics(headRequests.map(r => r.topics))
+
+        const toBlock = Math.min(head, fromBlock + CHUNK_SIZE - 1)
+        const pastRange = toBlock === head
+
+        const logs = await _getLogs({ fromBlock, toBlock, topics })
+
+        if (!logs) {
+            continue
+        }
+
+        await Bluebird.map(configsArray, async config => {
+            await config.processLogs({ logs, fromBlock, toBlock, pastRange });
+        });
+
+        await ConfigModel.updateOne(
+            { key: 'lastSyncedBlock' },
+            { value: toBlock },
+            { upsert: true },
+        )
+
+        fromBlock = toBlock + 1
     }
-
-    if (!toBlock) {
-        toBlock = await provider.getBlockNumber();
-    }
-
-    const uncachedChunk = {
-        fromBlock: lastSyncedBlock ? lastSyncedBlock + 1 : minBlock,
-        toBlock
-    }
-
-    const topics = [
-        _.flatten(await Bluebird
-            .map(configsArray, config => config.getFilters())
-            .map(m => m.topics)
-        ),
-    ];
-
-    const blocks = getChunks(uncachedChunk.fromBlock, uncachedChunk.toBlock, 1000);
-    const logs = await Bluebird.map(blocks, ({ from: fromBlock, to: toBlock }, i) => {
-        const fn = i + 1 === blocks.length ?
-            _getLogs : memoize(_getLogs, '_getAllLogs')
-        return fn({ fromBlock, toBlock, topics })
-    }, { concurrency: 10 }).then(_.flatten);
-
-    await ConfigModel.updateOne(
-        { key: 'lastSyncedBlock' },
-        { value: toBlock },
-        { upsert: true },
-    )
-
-    await Bluebird.map(configsArray, async config => {
-        await config.processLogs({ logs });
-    });
 }
 
-exports.updateLogsState = updateLogsState;
+exports.processNewState = processNewState;
+exports.processPastState = processPastState;
