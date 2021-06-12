@@ -1,7 +1,6 @@
 const Bluebird = require('bluebird')
 const _ = require('lodash')
 const { ethers } = require('ethers')
-const FARM_GENESIS = parseInt(process.env.FARM_GENESIS)
 const provider = new ethers.providers.JsonRpcProvider({
 	timeout: 3000,
 	url: process.env.RPC,
@@ -93,7 +92,7 @@ function getFirstForwardRangeLogs(pastRequests) {
     return _getLogs({ fromBlock: fLo, toBlock: fHi-1, topics })
 }
 
-const processNewState = async ({ configs, head }) => {
+const processPast = async ({ configs }) => {
     const configsArray = await Promise.resolve(
         _.entries(configs).map(([key, value]) => {
             return {
@@ -110,21 +109,53 @@ const processNewState = async ({ configs, head }) => {
         })
     });
 
-    let fromBlock = 1 + await ConfigModel.findOne({
-        key: 'lastSyncedBlock'
-    }).lean().then(m => m && m.value);
-    if (fromBlock < FARM_GENESIS) {
-        fromBlock = FARM_GENESIS
+    const pastRequests = _.flatten(configsArray.map(c => c.getRequests(true)))
+
+    const logs = await getFirstForwardRangeLogs(pastRequests)
+
+    if (!logs) {
+        return false
     }
 
+    console.error('processPastState: logs', logs.length)
+}
+
+const processHead = async ({ configs, head }) => {
+    const configsArray = await Promise.resolve(
+        _.entries(configs).map(([key, value]) => {
+            return {
+                ...value,
+                key,
+            };
+        })
+    ).then(async configsArray => {
+        return Bluebird.map(configsArray, async config => {
+            return {
+                ...config,
+                stateExists: await LogsStateModel.exists({ key: config.key }),
+            };
+        })
+    });
+
+    const lastSyncedBlock = await ConfigModel.findOne({
+        key: 'lastSyncedBlock'
+    }).lean().then(m => m && m.value);
+
+    let fromBlock = 1 + (lastSyncedBlock||0);
+
     while (fromBlock < head) {
-        const requests = _.flatten(configsArray.map(c => c.getRequests()))
+        const headRequests = _.flatten(configsArray.map(c => c.getRequests()))
 
-        const headRequests = requests.filter(r => !r.lo)
+        if (headRequests.some(r => !!r.address)) {
+            throw new Error('request with address not yet supported')
+        }
 
+        // limit the fromBlock to the smallest start of all requests
+        fromBlock = Math.min(fromBlock, ...headRequests.map(r => r.start || 0))
 
+        let toBlock = undefined
         if (fromBlock + CHUNK_SIZE - 1 < head) {
-            var toBlock = fromBlock + CHUNK_SIZE - 1
+            toBlock = fromBlock + CHUNK_SIZE - 1
         }
 
         const topics = mergeTopics(headRequests.map(r => r.topics))
@@ -134,14 +165,16 @@ const processNewState = async ({ configs, head }) => {
             continue
         }
 
-        await Bluebird.map(configsArray, async config => {
-            await config.processLogs({ logs, fromBlock, toBlock });
-        });
-
+        let latest = false
         if (!toBlock) {
             // catch the best head
-            var toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
+            toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
+            latest = true
         }
+
+        await Bluebird.map(configsArray, async config => {
+            await config.processLogs({ logs, fromBlock, toBlock, latest });
+        });
 
         await ConfigModel.updateOne(
             { key: 'lastSyncedBlock' },
@@ -153,5 +186,5 @@ const processNewState = async ({ configs, head }) => {
     }
 }
 
-exports.processNewState = processNewState;
-exports.processPastState = processPastState;
+exports.processHead = processHead;
+exports.processPast = processPast;

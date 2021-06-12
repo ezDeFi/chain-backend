@@ -1,7 +1,7 @@
 const { ethers } = require('ethers')
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
 const path = require("path")
-const { processNewState } = require('../services/update-logs-state')
+const { processHead, processPast } = require('../services/update-logs-state')
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
@@ -16,18 +16,26 @@ require("fs").readdirSync(normalizedPath).forEach(file => {
 
 console.log('State configs', configs)
 
-let updating = false;
+let isCatchingUp = false;
 provider.on('block', async head => {
     console.log('New block', head)
-    if (updating) {
+    if (isCatchingUp) {
         return;
     }
     try {
-        updating = true;
-        await processNewState({ configs, head })
+        isCatchingUp = true;
+        await processHead({ configs, head })
     } catch (error) {
         console.error(error.message)
     } finally {
-        updating = false;
+        isCatchingUp = false;
     }
 })
+
+function crawl() {
+    console.error('crawling...')
+    processPast({ configs }).then(() => {
+        setTimeout(crawl, 10000)
+    })
+}
+crawl()
