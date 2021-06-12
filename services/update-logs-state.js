@@ -93,9 +93,9 @@ function getFirstForwardRangeLogs(pastRequests) {
 }
 
 const processPast = async ({ configs }) => {
-    const pastRequests = _.flatten(configs.map(c => c.getRequests(true)))
+    const request = _.flatten(configs.map(c => c.getRequests(true)))
 
-    const logs = await getFirstForwardRangeLogs(pastRequests)
+    const logs = await getFirstForwardRangeLogs(request)
 
     if (!logs) {
         return false
@@ -112,21 +112,21 @@ const processHead = async ({ configs, head }) => {
     let fromBlock = 1 + (lastSyncedBlock||0);
 
     while (fromBlock < head) {
-        const headRequests = _.flatten(configs.map(c => c.getRequests()))
+        const requests = _.flatten(configs.map(c => c.getRequests()))
 
-        if (headRequests.some(r => !!r.address)) {
+        if (requests.some(r => !!r.address)) {
             throw new Error('request with address not yet supported')
         }
 
         // limit the fromBlock to the smallest start of all requests
-        fromBlock = Math.min(fromBlock, ...headRequests.map(r => r.start || 0))
+        fromBlock = Math.min(fromBlock, ...requests.map(r => r.start || 0))
 
         let toBlock = undefined
         if (fromBlock + CHUNK_SIZE - 1 < head) {
             toBlock = fromBlock + CHUNK_SIZE - 1
         }
 
-        const topics = mergeTopics(headRequests.map(r => r.topics))
+        const topics = mergeTopics(requests.map(r => r.topics))
         const logs = await _getLogs({ fromBlock, toBlock, topics })
 
         if (!logs) {
@@ -140,7 +140,7 @@ const processHead = async ({ configs, head }) => {
             latest = true
         }
 
-        await Bluebird.map(configsArray, async config => {
+        await Bluebird.map(configs, async config => {
             await config.processLogs({ logs, fromBlock, toBlock, latest });
         });
 
