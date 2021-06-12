@@ -93,23 +93,7 @@ function getFirstForwardRangeLogs(pastRequests) {
 }
 
 const processPast = async ({ configs }) => {
-    const configsArray = await Promise.resolve(
-        _.entries(configs).map(([key, value]) => {
-            return {
-                ...value,
-                key,
-            };
-        })
-    ).then(async configsArray => {
-        return Bluebird.map(configsArray, async config => {
-            return {
-                ...config,
-                stateExists: await LogsStateModel.exists({ key: config.key }),
-            };
-        })
-    });
-
-    const pastRequests = _.flatten(configsArray.map(c => c.getRequests(true)))
+    const pastRequests = _.flatten(configs.map(c => c.getRequests(true)))
 
     const logs = await getFirstForwardRangeLogs(pastRequests)
 
@@ -121,22 +105,6 @@ const processPast = async ({ configs }) => {
 }
 
 const processHead = async ({ configs, head }) => {
-    const configsArray = await Promise.resolve(
-        _.entries(configs).map(([key, value]) => {
-            return {
-                ...value,
-                key,
-            };
-        })
-    ).then(async configsArray => {
-        return Bluebird.map(configsArray, async config => {
-            return {
-                ...config,
-                stateExists: await LogsStateModel.exists({ key: config.key }),
-            };
-        })
-    });
-
     const lastSyncedBlock = await ConfigModel.findOne({
         key: 'lastSyncedBlock'
     }).lean().then(m => m && m.value);
@@ -144,7 +112,7 @@ const processHead = async ({ configs, head }) => {
     let fromBlock = 1 + (lastSyncedBlock||0);
 
     while (fromBlock < head) {
-        const headRequests = _.flatten(configsArray.map(c => c.getRequests()))
+        const headRequests = _.flatten(configs.map(c => c.getRequests()))
 
         if (headRequests.some(r => !!r.address)) {
             throw new Error('request with address not yet supported')

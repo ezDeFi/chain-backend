@@ -6,12 +6,14 @@ const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
 const statePath = "../states"
-const configs = {}
+const configs = []
 
 const normalizedPath = path.join(__dirname, statePath);
 require("fs").readdirSync(normalizedPath).forEach(file => {
-    const key = file.split('.').slice(0, -1).join('.')
-    configs[key] = require(`${normalizedPath}/${key}`)(key)
+    if (path.extname(file) == '.js') {
+        const key = file.split('.').slice(0, -1).join('.')
+        configs.push(require(`${normalizedPath}/${key}`)(key))
+    }
 })
 
 console.log('State configs', configs)
