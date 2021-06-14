@@ -36,6 +36,30 @@ const getChunks = (from, to, chunkSize) => {
     return blocks;
 }
 
+const chunkSizeUp = (type) => {
+    const concurrency = (!type || type == 'head') ? 1 : CONCURRENCY
+    const oldSize = CHUNK_SIZE[type]
+    let newSize = Math.floor(oldSize * Math.pow(5/3, -concurrency))
+    if (newSize <= oldSize) {
+        newSize = oldSize + 1
+    }
+    newSize = Math.min(CHUNK_SIZE_HARD_CAP, newSize)
+    if (newSize > oldSize) {
+        CHUNK_SIZE[type] = newSize
+        console.error(`getLogs: CHUNK_SIZE (${type}) increased to ${newSize}`)
+    }
+}
+
+const chunkSizeDown = (type) => {
+    const concurrency = (!type || type == 'head') ? 1 : CONCURRENCY
+    const oldSize = CHUNK_SIZE[type]
+    let newSize = Math.floor(oldSize / Math.pow(2, -concurrency))
+    if (newSize < oldSize) {
+        CHUNK_SIZE[type] = newSize
+        console.error(`getLogs: CHUNK_SIZE (${type}) decreased to ${CHUNK_SIZE[type]}`)
+    }
+}
+
 const _getLogs = async ({ fromBlock, toBlock, topics }, type) => {
     if (!type) {
         type = 'head'
@@ -52,17 +76,13 @@ const _getLogs = async ({ fromBlock, toBlock, topics }, type) => {
         }
         if (logs.length < TARGET_LOGS_PER_CHUNK) {
             if (toBlock - fromBlock >= CHUNK_SIZE[type] - 1) {
-                CHUNK_SIZE[type] = Math.min(CHUNK_SIZE_HARD_CAP, CHUNK_SIZE[type] <= 1 ? 2 : CHUNK_SIZE[type] = Math.floor(CHUNK_SIZE[type] * 5 / 3))
-                console.error(`getLogs: CHUNK_SIZE (${type}) increased to ${CHUNK_SIZE[type]}`)
+                chunkSizeUp(type)
             }
         }
         return logs;
     } catch(err) {
         if (err.code == 'TIMEOUT') {
-            if (CHUNK_SIZE[type] > 1) {
-                CHUNK_SIZE[type] >>= 1
-            }
-            console.error(`getLogs: CHUNK_SIZE (${type}) decreased to ${CHUNK_SIZE[type]}`)
+            chunkSizeDown(type)
         }
         throw err
     }
