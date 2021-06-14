@@ -33,8 +33,8 @@ module.exports = (key) => {
         if (!state) {
             return FARM_GENESIS
         }
-        if (state.lastProcessedBlock) {
-            return state.lastProcessedBlock + 1
+        if (state.block) {
+            return state.block + 1
         }
         return undefined    // LAST_SYNCED_BLOCK
     }
@@ -43,7 +43,7 @@ module.exports = (key) => {
         key,
 
         getRequests: async () => {
-            const state = await LogsStateModel.findOne({ key }).lean().then(m => m && m.value);
+            const state = await LogsStateModel.findOne({ key }).lean();
             // console.error('getRequests', state)
             const lo = getLo(state) || NEXT_UNSYNCED_BLOCK
 
@@ -70,8 +70,18 @@ module.exports = (key) => {
                 //     DEBUG_HEAD = toBlock
                 // }
 
-                const state = await LogsStateModel.findOne({ key }).lean().then(m => m && m.value);
+                if (Math.random() < 0.5) {
+                    throw "FUCK"
+                }
+
+                const state = await LogsStateModel.findOne({ key }).lean();
                 console.error('processLogs', {state})
+
+                const { value: oldValue, block: oldBlock } = {...state}
+                if (!!oldBlock && oldBlock+1 < fromBlock) {
+                    throw new Error(`Missing block range: ${oldBlock}-${fromBlock}`)
+                }
+
                 const lo = getLo(state) || nextUnsyncedBlock
 
                 if (lo == null) {  // ignore past crawling when we're up to head
@@ -83,42 +93,50 @@ module.exports = (key) => {
 
                 logs = logs.filter(log => log.blockNumber >= lo)
 
-                const newState = {...state}
+                let value = {...oldValue}
 
                 // up to head
-                if (nextUnsyncedBlock) {
+                if (!!nextUnsyncedBlock) {
                     console.error('--------------')
-                    delete newState.lastProcessedBlock
                 } else {
                     console.error('++++++++++++++', toBlock)
-                    newState.lastProcessedBlock = toBlock
+                    var block = toBlock
                 }
 
-                const admins = {}
+                const changes = {}
 
                 // assume that the logs is sorted by blockNumber and transactionIndex
                 for (let i = logs.length-1; i >= 0; --i) {
                     const log = logs[i]
                     const admin = '0x'+log.topics[1].slice(26)
-                    if (!admins.hasOwnProperty(admin)) {
+                    if (!changes.hasOwnProperty(admin)) {
                         const enable = log.data != ZERO_HASH
-                        admins[admin] = enable
+                        changes[admin] = enable
                     }
                 }
 
-                if (state && state.lastProcessedBlock === newState.lastProcessedBlock && Object.keys(admins) == 0) {
+                if (!!block && Object.keys(changes) == 0) {
                     return  // no data change
                 }
 
-                newState.admins = Object.assign(newState.admins || {}, admins)
+                value = Object.assign(value, changes)
 
                 return LogsStateModel.updateOne(
                     { key },
-                    { value: newState },
+                    { value, block },
                     { upsert: true },
                 );
             } catch (err) {
-                console.error('ERRORRRRRRRRRRRRRR', err, logs)
+                if (!nextUnsyncedBlock) {
+                    console.error(`ERROR in ${key}.processLogs, skip!`, err)
+                    return
+                }
+                console.error(`ERROR in ${key}.processLogs, tracking last synced block ${nextUnsyncedBlock-1}`, err)
+                return LogsStateModel.updateOne(
+                    { key },
+                    { block: nextUnsyncedBlock-1 },
+                    { upsert: true },
+                );
             }
         }
     }

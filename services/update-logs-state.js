@@ -196,7 +196,7 @@ const processHead = async ({ configs, head }) => {
     const requests =
         _.flatten(await Bluebird.map(configs, async config => await config.getRequests()))
         .filter(r => !r.hi)
-    
+
     if (requests.length == 0) {
         return
     }
@@ -206,35 +206,39 @@ const processHead = async ({ configs, head }) => {
         throw new Error('request with address not yet supported')
     }
 
-    const minRequestedBlock = Math.min(...requests.map(r => r.lo == NEXT_UNSYNCED_BLOCK ? nextUnsyncedBlock : r.lo))
+    requests.forEach(r => {
+        if (r.lo == NEXT_UNSYNCED_BLOCK) {
+            r.lo = nextUnsyncedBlock
+        }
+    })
+
+    const minRequestedBlock = Math.min(...requests.map(r => r.lo))
     const HEAD_BUFFER_RANGE = CHUNK_SIZE.head/2+1
     const fromBlock = Math.max(minRequestedBlock, head - HEAD_BUFFER_RANGE)
 
     const inRangeRequests = requests.filter(r => r.lo >= fromBlock)
-    console.error({fromBlock, inRangeRequests})
-    if (inRangeRequests.length == 0) {
-        return
+    console.error({nextUnsyncedBlock, minRequestedBlock, fromBlock, inRangeRequests})
+    if (inRangeRequests.length > 0) {
+        console.error({fromBlock, CHUNK_SIZE, head})
+
+        // TODO: merge addresses here
+        const topics = mergeTopics(inRangeRequests.map(r => r.topics))
+        const logs = await _getLogs({ fromBlock, topics })
+    
+        if (!logs) {
+            return  // failed
+        }
+    
+        var toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
+    
+        await Bluebird.map(configs, async config => {
+            await config.processLogs({ logs, fromBlock, toBlock, nextUnsyncedBlock });
+        });
     }
-
-    console.error({fromBlock, CHUNK_SIZE, head})
-
-    // TODO: merge addresses here
-    const topics = mergeTopics(inRangeRequests.map(r => r.topics))
-    const logs = await _getLogs({ fromBlock, topics })
-
-    if (!logs) {
-        return  // failed
-    }
-
-    const toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
-
-    await Bluebird.map(configs, async config => {
-        await config.processLogs({ logs, fromBlock, toBlock, nextUnsyncedBlock });
-    });
 
     await ConfigModel.updateOne(
         { key: 'lastSyncedBlock' },
-        { value: toBlock },
+        { value: toBlock || head },
         { upsert: true },
     )
 }
