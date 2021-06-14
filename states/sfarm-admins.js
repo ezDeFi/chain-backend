@@ -118,7 +118,7 @@ module.exports = (key) => {
                     { upsert: true },
                 );
             } catch (err) {
-                console.error('ERRORRRRRRRRRRRRRR', err)
+                console.error('ERRORRRRRRRRRRRRRR', err, logs)
             }
         }
     }

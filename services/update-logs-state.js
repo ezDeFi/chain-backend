@@ -9,6 +9,7 @@ const ConfigModel = require("../models/ConfigModel");
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
+const CONCURRENCY = 10
 const NEXT_UNSYNCED_BLOCK = 'NEXT_UNSYNCED_BLOCK'
 
 const CHUNK_SIZE_HARD_CAP = 4000;
@@ -17,6 +18,22 @@ let CHUNK_SIZE = {
     head: CHUNK_SIZE_HARD_CAP,
     forward: CHUNK_SIZE_HARD_CAP,
     backward: CHUNK_SIZE_HARD_CAP,
+}
+
+const getChunks = (from, to, chunkSize) => {
+    const roundedFrom = Math.floor(from / chunkSize) * chunkSize
+    const roundedTo = (Math.floor(to / chunkSize) + 1) * chunkSize
+    const numberOfBlocks = (roundedTo - roundedFrom) / chunkSize
+
+    const blocks = _.range(numberOfBlocks).map(i => {
+        const blockFrom = roundedFrom + (chunkSize * i)
+        const blockTo = roundedFrom + (chunkSize * i) + chunkSize - 1
+        return {
+            from: blockFrom < from ? from : blockFrom,
+            to: blockTo > to ? to : blockTo,
+        }
+    });
+    return blocks;
 }
 
 const _getLogs = async ({ fromBlock, toBlock, topics }, type) => {
@@ -41,13 +58,13 @@ const _getLogs = async ({ fromBlock, toBlock, topics }, type) => {
         }
         return logs;
     } catch(err) {
-        if (err.code != 'TIMEOUT') {
-            throw err
+        if (err.code == 'TIMEOUT') {
+            if (CHUNK_SIZE[type] > 1) {
+                CHUNK_SIZE[type] >>= 1
+            }
+            console.error(`getLogs: CHUNK_SIZE (${type}) decreased to ${CHUNK_SIZE[type]}`)
         }
-        if (CHUNK_SIZE[type] > 1) {
-            CHUNK_SIZE[type] >>= 1
-        }
-        console.error(`getLogs: CHUNK_SIZE (${type}) decreased to ${CHUNK_SIZE[type]}`)
+        throw err
     }
 }
 
@@ -109,6 +126,15 @@ const processPast = async ({ configs }) => {
     // }
 }
 
+const getLogs = ({requests, fromBlock, toBlock}, type) => {
+    const inRangeRequests = requests.filter(r => r.lo <= toBlock)
+    if (inRangeRequests.length == 0) {
+        return []
+    }
+    const topics = mergeTopics(requests.map(r => r.topics))
+    return _getLogs({ fromBlock, toBlock, topics}, type)
+}
+
 const getNextForwardLogs = async(requests) => {
     const type = 'forward'
 
@@ -121,7 +147,7 @@ const getNextForwardLogs = async(requests) => {
         console.error('no requests')
         return
     }
-    
+
     // TODO merge addresses
     if (requests.some(r => !!r.address)) {
         throw new Error('request with address not yet supported')
@@ -131,17 +157,13 @@ const getNextForwardLogs = async(requests) => {
     const fromBlock = minRequestedBlock
 
     const head = await provider.getBlockNumber()    // TODO: remove this call?
-    const toBlock = Math.min(fromBlock + CHUNK_SIZE[type] - 1, head)
+    const toBlock = Math.min(fromBlock + CHUNK_SIZE[type]*CONCURRENCY, head)
 
-    const inRangeRequests = requests.filter(r => r.lo <= toBlock)
-    console.error({fromBlock, toBlock, inRangeRequests})
-    if (inRangeRequests.length == 0) {
-        console.error('no inRangeRequests')
-        return
-    }
+    const blocks = getChunks(fromBlock, toBlock, CHUNK_SIZE[type]);
+    const logs = await Bluebird.map(blocks, ({ from: fromBlock, to: toBlock }, i) => {
+        return getLogs({ fromBlock, toBlock, requests }, type)
+    }, { concurrency: CONCURRENCY }).then(_.flatten);
 
-    const topics = mergeTopics(requests.map(r => r.topics))
-    const logs = await _getLogs({ fromBlock, toBlock, topics}, type)
     if (!logs) {
         return
     }
