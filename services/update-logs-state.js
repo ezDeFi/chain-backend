@@ -20,17 +20,14 @@ let CHUNK_SIZE = {
     backward: CHUNK_SIZE_HARD_CAP,
 }
 
-const getChunks = (from, to, chunkSize) => {
-    const roundedFrom = Math.floor(from / chunkSize) * chunkSize
-    const roundedTo = (Math.floor(to / chunkSize) + 1) * chunkSize
-    const numberOfBlocks = (roundedTo - roundedFrom) / chunkSize
-
-    const blocks = _.range(numberOfBlocks).map(i => {
-        const blockFrom = roundedFrom + (chunkSize * i)
-        const blockTo = roundedFrom + (chunkSize * i) + chunkSize - 1
+const splitChunks = (from, to, count) => {
+    const chunkSize = Math.round((to - from) / count)
+    const blocks = _.range(count).map(i => {
+        const blockFrom = from + (chunkSize * i)
+        const blockTo = blockFrom + chunkSize - 1
         return {
-            from: blockFrom < from ? from : blockFrom,
-            to: blockTo > to ? to : blockTo,
+            from: blockFrom,
+            to: blockTo,
         }
     });
     return blocks;
@@ -179,7 +176,7 @@ const getNextForwardLogs = async(requests) => {
     const head = await provider.getBlockNumber()    // TODO: remove this call?
     const toBlock = Math.min(fromBlock + CHUNK_SIZE[type]*CONCURRENCY, head)
 
-    const blocks = getChunks(fromBlock, toBlock, CHUNK_SIZE[type]);
+    const blocks = splitChunks(fromBlock, toBlock, CONCURRENCY);
     const logs = await Bluebird.map(blocks, ({ from: fromBlock, to: toBlock }, i) => {
         return getLogs({ fromBlock, toBlock, requests }, type)
     }, { concurrency: CONCURRENCY }).then(_.flatten);
