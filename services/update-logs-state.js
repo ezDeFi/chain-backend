@@ -6,31 +6,24 @@ const provider = new ethers.providers.JsonRpcProvider({
 	url: process.env.RPC,
 })
 const ConfigModel = require("../models/ConfigModel");
-const LogsStateModel = require('../models/LogsStateModel')
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
+const NEXT_UNSYNCED_BLOCK = 'NEXT_UNSYNCED_BLOCK'
+
+const CHUNK_SIZE_HARD_CAP = 4000;
 const TARGET_LOGS_PER_CHUNK = 500;
-let CHUNK_SIZE = 30 // 1000
-
-const getChunks = (from, to, chunkSize) => {
-    const roundedFrom = Math.floor(from / chunkSize) * chunkSize
-    const roundedTo = (Math.floor(to / chunkSize) + 1) * chunkSize
-    const numberOfBlocks = (roundedTo - roundedFrom) / chunkSize
-
-    const blocks = _.range(numberOfBlocks).map(i => {
-        const blockFrom = roundedFrom + (chunkSize * i)
-        const blockTo = roundedFrom + (chunkSize * i) + chunkSize - 1
-        return {
-            from: blockFrom < from ? from : blockFrom,
-            to: blockTo > to ? to : blockTo,
-        }
-    });
-    return blocks;
+let CHUNK_SIZE = {
+    head: CHUNK_SIZE_HARD_CAP,
+    forward: CHUNK_SIZE_HARD_CAP,
+    backward: CHUNK_SIZE_HARD_CAP,
 }
 
-const _getLogs = async ({ fromBlock, toBlock, topics }) => {
-    console.error('_getLogs', fromBlock, toBlock, topics)
+const _getLogs = async ({ fromBlock, toBlock, topics }, type) => {
+    if (!type) {
+        type = 'head'
+    }
+    console.error(`_getLogs:${type}`, fromBlock, toBlock, topics)
     try {
         const logs = await provider.getLogs({
             topics,
@@ -41,9 +34,9 @@ const _getLogs = async ({ fromBlock, toBlock, topics }) => {
             throw new Error(JSON.stringify(logs));
         }
         if (logs.length < TARGET_LOGS_PER_CHUNK) {
-            if (toBlock - fromBlock >= CHUNK_SIZE - 1) {
-                CHUNK_SIZE = CHUNK_SIZE <= 1 ? 2 : CHUNK_SIZE = Math.floor(CHUNK_SIZE * 5 / 3)
-                console.error('getLogs: CHUNK_SIZE increased to', CHUNK_SIZE)
+            if (toBlock - fromBlock >= CHUNK_SIZE[type] - 1) {
+                CHUNK_SIZE[type] = Math.min(CHUNK_SIZE_HARD_CAP, CHUNK_SIZE[type] <= 1 ? 2 : CHUNK_SIZE[type] = Math.floor(CHUNK_SIZE[type] * 5 / 3))
+                console.error(`getLogs: CHUNK_SIZE (${type}) increased to ${CHUNK_SIZE[type]}`)
             }
         }
         return logs;
@@ -51,10 +44,10 @@ const _getLogs = async ({ fromBlock, toBlock, topics }) => {
         if (err.code != 'TIMEOUT') {
             throw err
         }
-        if (CHUNK_SIZE > 1) {
-            CHUNK_SIZE >>= 1
+        if (CHUNK_SIZE[type] > 1) {
+            CHUNK_SIZE[type] >>= 1
         }
-        console.error('getLogs: CHUNK_SIZE decreased to', CHUNK_SIZE)
+        console.error(`getLogs: CHUNK_SIZE (${type}) decreased to ${CHUNK_SIZE[type]}`)
     }
 }
 
@@ -73,85 +66,138 @@ const mergeTopics = (topics) => {
         })
 }
 
-function getFirstForwardRangeLogs(pastRequests) {
-    const forwardLos = pastRequests
-        .filter(r => !r.backward)
-        .map(r => r.lo)
-        .sort((a, b) => a - b)
-    const fLo = forwardLos[0]
-    const fHi = Math.min(forwardLos.find(a => a > fLo), fLo + CHUNK_SIZE)
-
-    if (fLo >= fHi) {
-        return undefined
+const getNextBackwardLogs = async(requests) => {
+    const type = 'backward'
+    const backwardRequests = requests.filter(r => r.backward)
+    if (backwardRequests.length == 0) {
+        return
+    }
+    const toBlock = Math.max(...backwardRequests.map(r => r.hi))
+    const minLo = Math.max(...requests.map(r => (r.lo || 0)))
+    if (minLo > 0) {
+        var fromBlock = minLo
+    } else {
+        var fromBlock = 0
+    }
+    if (fromBlock < toBlock - CHUNK_SIZE[type] + 1) {
+        fromBlock = toBlock - CHUNK_SIZE[type] + 1
     }
 
-    const forwardRequests = pastRequests
-        .filter(r => r.lo < fHi && r.hi > fLo)
-
-    const topics = mergeTopics(forwardRequests.map(r => r.topics))
-    return _getLogs({ fromBlock: fLo, toBlock: fHi-1, topics })
+    const topics = mergeTopics(requests.map(r => r.topics))
+    const logs = await _getLogs({ fromBlock, toBlock, topics }, type)
+    if (!logs) {
+        return
+    }
+    return { logs, fromBlock, toBlock }
 }
 
 const processPast = async ({ configs }) => {
-    const request = _.flatten(configs.map(c => c.getRequests(true)))
+    const requests = _.flatten(await Bluebird.map(configs, async config => await config.getRequests()))
 
-    const logs = await getFirstForwardRangeLogs(request)
-
-    if (!logs) {
-        return false
+    const forwardParams = await getNextForwardLogs(requests)
+    if (!!forwardParams) {
+        await Bluebird.map(configs, async config => {
+            await config.processLogs({...forwardParams});
+        });
     }
 
-    console.error('processPastState: logs', logs.length)
+    // const backwardParams = await getNextBackwardLogs(requests)
+    // if (!!backwardParams) {
+    //     await Bluebird.map(configs, async config => {
+    //         await config.processLogs({...backwardParams, past: true});
+    //     });
+    // }
+}
+
+const getNextForwardLogs = async(requests) => {
+    const type = 'forward'
+
+    console.error({requests})
+
+    requests = requests
+        .filter(r => !r.backward && r.lo != NEXT_UNSYNCED_BLOCK)
+
+    if (requests.length == 0) {
+        console.error('no requests')
+        return
+    }
+    
+    // TODO merge addresses
+    if (requests.some(r => !!r.address)) {
+        throw new Error('request with address not yet supported')
+    }
+
+    const minRequestedBlock = Math.min(...requests.map(r => r.lo))
+    const fromBlock = minRequestedBlock
+
+    const head = await provider.getBlockNumber()    // TODO: remove this call?
+    const toBlock = Math.min(fromBlock + CHUNK_SIZE[type] - 1, head)
+
+    const inRangeRequests = requests.filter(r => r.lo <= toBlock)
+    console.error({fromBlock, toBlock, inRangeRequests})
+    if (inRangeRequests.length == 0) {
+        console.error('no inRangeRequests')
+        return
+    }
+
+    const topics = mergeTopics(requests.map(r => r.topics))
+    const logs = await _getLogs({ fromBlock, toBlock, topics}, type)
+    if (!logs) {
+        return
+    }
+
+    return { logs, fromBlock, toBlock }
 }
 
 const processHead = async ({ configs, head }) => {
-    const lastSyncedBlock = await ConfigModel.findOne({
+    const nextUnsyncedBlock = (await ConfigModel.findOne({
         key: 'lastSyncedBlock'
-    }).lean().then(m => m && m.value);
+    }).lean().then(m => m && m.value) || 0) + 1;
 
-    let fromBlock = 1 + (lastSyncedBlock||0);
-
-    while (fromBlock < head) {
-        const requests = _.flatten(configs.map(c => c.getRequests()))
-
-        if (requests.some(r => !!r.address)) {
-            throw new Error('request with address not yet supported')
-        }
-
-        // limit the fromBlock to the smallest start of all requests
-        fromBlock = Math.min(fromBlock, ...requests.map(r => r.start || 0))
-
-        let toBlock = undefined
-        if (fromBlock + CHUNK_SIZE - 1 < head) {
-            toBlock = fromBlock + CHUNK_SIZE - 1
-        }
-
-        const topics = mergeTopics(requests.map(r => r.topics))
-        const logs = await _getLogs({ fromBlock, toBlock, topics })
-
-        if (!logs) {
-            continue
-        }
-
-        let latest = false
-        if (!toBlock) {
-            // catch the best head
-            toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
-            latest = true
-        }
-
-        await Bluebird.map(configs, async config => {
-            await config.processLogs({ logs, fromBlock, toBlock, latest });
-        });
-
-        await ConfigModel.updateOne(
-            { key: 'lastSyncedBlock' },
-            { value: toBlock },
-            { upsert: true },
-        )
-
-        fromBlock = toBlock + 1
+    const requests =
+        _.flatten(await Bluebird.map(configs, async config => await config.getRequests()))
+        .filter(r => !r.hi)
+    
+    if (requests.length == 0) {
+        return
     }
+
+    // TODO merge addresses
+    if (requests.some(r => !!r.address)) {
+        throw new Error('request with address not yet supported')
+    }
+
+    const minRequestedBlock = Math.min(...requests.map(r => r.lo == NEXT_UNSYNCED_BLOCK ? nextUnsyncedBlock : r.lo))
+    const HEAD_BUFFER_RANGE = CHUNK_SIZE.head/2+1
+    const fromBlock = Math.max(minRequestedBlock, head - HEAD_BUFFER_RANGE)
+
+    const inRangeRequests = requests.filter(r => r.lo >= fromBlock)
+    console.error({fromBlock, inRangeRequests})
+    if (inRangeRequests.length == 0) {
+        return
+    }
+
+    console.error({fromBlock, CHUNK_SIZE, head})
+
+    // TODO: merge addresses here
+    const topics = mergeTopics(inRangeRequests.map(r => r.topics))
+    const logs = await _getLogs({ fromBlock, topics })
+
+    if (!logs) {
+        return  // failed
+    }
+
+    const toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
+
+    await Bluebird.map(configs, async config => {
+        await config.processLogs({ logs, fromBlock, toBlock, nextUnsyncedBlock });
+    });
+
+    await ConfigModel.updateOne(
+        { key: 'lastSyncedBlock' },
+        { value: toBlock },
+        { upsert: true },
+    )
 }
 
 exports.processHead = processHead;
