@@ -37,7 +37,7 @@ provider.on('block', async head => {
 function crawl() {
     console.error('crawling...')
     processPast({ configs })
-        .then(() => setTimeout(crawl, 1000))
+        .then(() => setTimeout(crawl))
         .catch((err) => setTimeout(crawl, 1000))
 }
 crawl()
