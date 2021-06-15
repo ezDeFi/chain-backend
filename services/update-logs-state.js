@@ -1,6 +1,7 @@
 const Bluebird = require('bluebird')
 const _ = require('lodash')
 const { ethers } = require('ethers')
+const { FRESH_BLOCK, CONCURRENCY, CHUNK_SIZE_HARD_CAP, TARGET_LOGS_PER_CHUNK } = require('../helpers/constants').getlogs
 const provider = new ethers.providers.JsonRpcProvider({
 	timeout: 3000,
 	url: process.env.RPC,
@@ -9,22 +10,18 @@ const ConfigModel = require("../models/ConfigModel");
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
-const CONCURRENCY = 10
-const FRESH_BLOCK = 'FRESH_BLOCK'
-
-const CHUNK_SIZE_HARD_CAP = 4000;
-const TARGET_LOGS_PER_CHUNK = 500;
-let CHUNK_SIZE = {
+const chunkSize = {
     head: CHUNK_SIZE_HARD_CAP,
     forward: CHUNK_SIZE_HARD_CAP,
     backward: CHUNK_SIZE_HARD_CAP,
 }
 
 const splitChunks = (from, to, count) => {
-    const chunkSize = Math.round((to - from) / count)
+    console.error('slpitChunks', {from, to, count})
+    const size = Math.round((to - from) / count)
     const blocks = _.range(count).map(i => {
-        const blockFrom = from + (chunkSize * i)
-        const blockTo = blockFrom + chunkSize - 1
+        const blockFrom = from + (size * i)
+        const blockTo = blockFrom + size - 1
         return {
             from: blockFrom,
             to: blockTo,
@@ -35,25 +32,25 @@ const splitChunks = (from, to, count) => {
 
 const chunkSizeUp = (type) => {
     const concurrency = (!type || type == 'head') ? 1 : CONCURRENCY
-    const oldSize = CHUNK_SIZE[type]
+    const oldSize = chunkSize[type]
     let newSize = Math.floor(oldSize * Math.pow(5/3, -concurrency))
     if (newSize <= oldSize) {
         newSize = oldSize + 1
     }
     newSize = Math.min(CHUNK_SIZE_HARD_CAP, newSize)
     if (newSize > oldSize) {
-        CHUNK_SIZE[type] = newSize
+        chunkSize[type] = newSize
         console.error(`getLogs: CHUNK_SIZE (${type}) increased to ${newSize}`)
     }
 }
 
 const chunkSizeDown = (type) => {
     const concurrency = (!type || type == 'head') ? 1 : CONCURRENCY
-    const oldSize = CHUNK_SIZE[type]
+    const oldSize = chunkSize[type]
     let newSize = Math.floor(oldSize / Math.pow(2, -concurrency))
     if (newSize < oldSize) {
-        CHUNK_SIZE[type] = newSize
-        console.error(`getLogs: CHUNK_SIZE (${type}) decreased to ${CHUNK_SIZE[type]}`)
+        chunkSize[type] = newSize
+        console.error(`getLogs: CHUNK_SIZE (${type}) decreased to ${chunkSize[type]}`)
     }
 }
 
@@ -72,7 +69,7 @@ const _getLogs = async ({ fromBlock, toBlock, topics }, type) => {
             throw new Error(JSON.stringify(logs));
         }
         if (logs.length < TARGET_LOGS_PER_CHUNK) {
-            if (toBlock - fromBlock >= CHUNK_SIZE[type] - 1) {
+            if (toBlock - fromBlock >= chunkSize[type] - 1) {
                 chunkSizeUp(type)
             }
         }
@@ -100,31 +97,6 @@ const mergeTopics = (topics) => {
         })
 }
 
-const getNextBackwardLogs = async(requests) => {
-    const type = 'backward'
-    const backwardRequests = requests.filter(r => r.backward)
-    if (backwardRequests.length == 0) {
-        return
-    }
-    const toBlock = Math.max(...backwardRequests.map(r => r.hi))
-    const minLo = Math.max(...requests.map(r => (r.lo || 0)))
-    if (minLo > 0) {
-        var fromBlock = minLo
-    } else {
-        var fromBlock = 0
-    }
-    if (fromBlock < toBlock - CHUNK_SIZE[type] + 1) {
-        fromBlock = toBlock - CHUNK_SIZE[type] + 1
-    }
-
-    const topics = mergeTopics(requests.map(r => r.topics))
-    const logs = await _getLogs({ fromBlock, toBlock, topics }, type)
-    if (!logs) {
-        return
-    }
-    return { logs, fromBlock, toBlock }
-}
-
 const processPast = async ({ configs }) => {
     const requests = _.flatten(await Bluebird.map(configs, async config => await config.getRequests()))
 
@@ -134,13 +106,6 @@ const processPast = async ({ configs }) => {
             await config.processLogs({...forwardParams});
         });
     }
-
-    // const backwardParams = await getNextBackwardLogs(requests)
-    // if (!!backwardParams) {
-    //     await Bluebird.map(configs, async config => {
-    //         await config.processLogs({...backwardParams, past: true});
-    //     });
-    // }
 }
 
 const getLogs = ({requests, fromBlock, toBlock}, type) => {
@@ -174,7 +139,7 @@ const getNextForwardLogs = async(requests) => {
     const fromBlock = minRequestedBlock
 
     const head = await provider.getBlockNumber()    // TODO: remove this call?
-    const toBlock = Math.min(fromBlock + CHUNK_SIZE[type]*CONCURRENCY, head)
+    const toBlock = Math.min(fromBlock + chunkSize[type]*CONCURRENCY, head)
 
     const blocks = splitChunks(fromBlock, toBlock, CONCURRENCY);
     const logs = await Bluebird.map(blocks, ({ from: fromBlock, to: toBlock }, i) => {
@@ -189,9 +154,9 @@ const getNextForwardLogs = async(requests) => {
 }
 
 const processHead = async ({ configs, head }) => {
-    const freshBlock = await ConfigModel.findOne({
+    const freshBlock = (await ConfigModel.findOne({
         key: 'lastHead'
-    }).lean().then(m => m ? m.value : 0) + 1;
+    }).lean().then(m => m && m.value) || 0) + 1;
 
     const requests =
         _.flatten(await Bluebird.map(configs, async config => await config.getRequests()))
@@ -213,13 +178,13 @@ const processHead = async ({ configs, head }) => {
     })
 
     const minRequestedBlock = Math.min(...requests.map(r => r.lo))
-    const HEAD_BUFFER_RANGE = CHUNK_SIZE.head/2+1
+    const HEAD_BUFFER_RANGE = (chunkSize.head>>1)+1
     const fromBlock = Math.max(minRequestedBlock, head - HEAD_BUFFER_RANGE)
 
     const inRangeRequests = requests.filter(r => r.lo >= fromBlock)
     console.error({freshBlock, minRequestedBlock, fromBlock, inRangeRequests})
     if (inRangeRequests.length > 0) {
-        console.error({fromBlock, CHUNK_SIZE, head})
+        console.error({fromBlock, chunkSize, head})
 
         // TODO: merge addresses here
         const topics = mergeTopics(inRangeRequests.map(r => r.topics))

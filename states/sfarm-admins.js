@@ -1,25 +1,12 @@
 const _ = require('lodash')
 const { ethers } = require('ethers')
+const { FRESH_BLOCK } = require('../helpers/constants').getlogs
+const { ZERO_HASH } = require('../helpers/constants').hexes
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
 const contractABI = require('../ABIs/SFarm.json').abi
 const LogsStateModel = require('../models/LogsStateModel')
 const SFarm = new ethers.Contract(process.env.FARM, contractABI, provider)
 const FARM_GENESIS = parseInt(process.env.FARM_GENESIS)
-
-const ZERO_HASH = '0x'.padEnd(66, '0')
-
-const FRESH_BLOCK = 'FRESH_BLOCK'
-
-// let DEBUG_HEAD
-
-const processMaskLogs = ({ logs }) => {
-    return _.pickBy(logs
-        .map(({ data, topics }) => ({
-            ['0x' + topics[1].substr(26)]: parseInt(data),
-        }))
-        .reduce((a, b) => ({ ...a, ...b }), {})
-    )
-}
 
 const filter = SFarm.filters.AuthorizeAdmin(null, null)
 const filters = [filter]
@@ -111,10 +98,11 @@ module.exports = (key) => {
                     console.error(`ERROR in ${key}.processLogs, skip!`, err)
                     return
                 }
-                console.error(`ERROR in ${key}.processLogs, tracking last synced block ${freshBlock-1}`, err)
+                const block = freshBlock-1
+                console.error(`ERROR in ${key}.processLogs, tracking last synced block ${block}`, err)
                 return LogsStateModel.updateOne(
                     { key },
-                    { block: freshBlock-1 },
+                    { block },
                     { upsert: true },
                 );
             }
