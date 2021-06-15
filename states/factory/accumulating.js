@@ -21,6 +21,7 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
             const from = getNextFrom(state) || FRESH_BLOCK
 
             return {
+                address: filter.address,
                 topics: filter.topics,
                 from,
             }

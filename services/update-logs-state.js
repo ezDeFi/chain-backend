@@ -1,8 +1,8 @@
 const Bluebird = require('bluebird')
 const _ = require('lodash')
-const { ethers } = require('ethers')
+const { JsonRpcProvider } = require('@ethersproject/providers')
 const { FRESH_BLOCK, CONCURRENCY, CHUNK_SIZE_HARD_CAP, TARGET_LOGS_PER_CHUNK } = require('../helpers/constants').getlogs
-const provider = new ethers.providers.JsonRpcProvider({
+const provider = new JsonRpcProvider({
 	timeout: 3000,
 	url: process.env.RPC,
 })
@@ -54,13 +54,14 @@ const chunkSizeDown = (type) => {
     }
 }
 
-const _getLogs = async ({ fromBlock, toBlock, topics }, type) => {
+const _getLogs = async ({ address, fromBlock, toBlock, topics }, type) => {
     if (!type) {
         type = 'head'
     }
-    // console.log(`_getLogs:${type}`, fromBlock, toBlock, topics)
+    // console.log(`_getLogs:${type}`, {fromBlock, toBlock, address, topics})
     try {
         const logs = await provider.getLogs({
+            address,
             topics,
             fromBlock,
             toBlock,
@@ -109,11 +110,6 @@ const processPast = async ({ configs }) => {
         console.log('processPast: no requests', {maxRange})
         return
     }
-
-    // TODO merge addresses
-    if (requests.some(r => !!r.address)) {
-        throw new Error('request with address not yet supported')
-    }
     
     const minRequestedBlock = Math.min(...requests.map(r => r.from))
     const fromBlock = minRequestedBlock
@@ -139,8 +135,9 @@ const getLogsInRange = ({requests, fromBlock, toBlock}, type) => {
         // console.log(`no request in range ${fromBlock} +${toBlock-fromBlock}`)
         return []
     }
+    const address = inRangeRequests.filter(r => !!r.address).map(r => r.address)
     const topics = mergeTopics(inRangeRequests.map(r => r.topics))
-    return _getLogs({ fromBlock, toBlock, topics}, type)
+    return _getLogs({ address, fromBlock, toBlock, topics}, type)
 }
 
 const processHead = async ({ configs, head }) => {
@@ -153,11 +150,6 @@ const processHead = async ({ configs, head }) => {
     if (requests.length == 0) {
         console.log('processHead: no requests', {maxRange})
         return
-    }
-
-    // TODO merge addresses
-    if (requests.some(r => !!r.address)) {
-        throw new Error('request with address not yet supported')
     }
 
     const freshBlock = (await ConfigModel.findOne({
@@ -178,9 +170,9 @@ const processHead = async ({ configs, head }) => {
     if (inRangeRequests.length > 0) {
         // console.log({fromBlock, chunkSize, head})
 
-        // TODO: merge addresses here
+        const address = inRangeRequests.filter(r => !!r.address).map(r => r.address)
         const topics = mergeTopics(inRangeRequests.map(r => r.topics))
-        const logs = await _getLogs({ fromBlock, topics })
+        const logs = await _getLogs({ address, fromBlock, topics })
     
         if (!logs) {
             return  // failed
