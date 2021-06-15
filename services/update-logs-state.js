@@ -33,7 +33,7 @@ const splitChunks = (from, to, count) => {
 const chunkSizeUp = (type) => {
     const concurrency = (!type || type == 'head') ? 1 : CONCURRENCY
     const oldSize = chunkSize[type]
-    let newSize = Math.floor(oldSize * Math.pow(5/3, -concurrency))
+    let newSize = Math.floor(oldSize * Math.pow(5/3, 1/concurrency))
     if (newSize <= oldSize) {
         newSize = oldSize + 1
     }
@@ -41,16 +41,21 @@ const chunkSizeUp = (type) => {
     if (newSize > oldSize) {
         chunkSize[type] = newSize
         console.error(`getLogs: CHUNK_SIZE (${type}) increased to ${newSize}`)
+    } else {
+        console.error(`getLogs: CHUNK_SIZE (${type}) unchanged ${newSize}`)
     }
 }
 
 const chunkSizeDown = (type) => {
     const concurrency = (!type || type == 'head') ? 1 : CONCURRENCY
     const oldSize = chunkSize[type]
-    let newSize = Math.floor(oldSize / Math.pow(2, -concurrency))
+    let newSize = Math.floor(oldSize * Math.pow(1/2, 1/concurrency))
+    newSize = Math.max(1, newSize)
     if (newSize < oldSize) {
         chunkSize[type] = newSize
         console.error(`getLogs: CHUNK_SIZE (${type}) decreased to ${chunkSize[type]}`)
+    } else {
+        console.error(`getLogs: CHUNK_SIZE (${type}) unchanged ${chunkSize[type]}`)
     }
 }
 
