@@ -29,10 +29,6 @@ module.exports = (key) => {
                 }
             }
 
-            if (Object.keys(changes) == 0) {
-                return  // no data change
-            }
-
             return Object.assign({...value}, changes)
         }
     })

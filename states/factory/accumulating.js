@@ -29,7 +29,7 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
         processLogs: async ({ logs, fromBlock, toBlock, freshBlock }) => {
             try {
                 const state = await LogsStateModel.findOne({ key }).lean();
-                console.log('processLogs', {state})
+                // console.log('processLogs', {state, logs, fromBlock, toBlock, freshBlock})
 
                 const { value: oldValue, block: oldBlock } = {...state}
                 if (!!oldBlock && oldBlock+1 < fromBlock) {
@@ -47,24 +47,32 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
 
                 logs = logs.filter(log => 
                     from <= log.blockNumber &&
-                    (filter.address && log.address === filter.address) &&
+                    (!filter.address || log.address === filter.address) &&
                     !filter.topics.some((topic, i) => topic && log.topics[i] !== topic)
                 )
 
                 // APPLY LOGS TO OLD VALUE
                 const value = await applyLogs(oldValue, logs)
 
-                // up to head
+                const newState = {}
+
                 if (!freshBlock) {
-                    if (!value) {
-                        return // no change
-                    }
-                    var block = toBlock
+                    // always update state block in past sync
+                    newState.block = toBlock
+                }
+
+                if (JSON.stringify(value) != JSON.stringify(oldValue)) {
+                    newState.value = value
+                }
+
+                if (Object.keys(newState).length == 0) {
+                    // nothing to update
+                    return
                 }
 
                 return LogsStateModel.updateOne(
                     { key },
-                    { value, block },
+                    newState,
                     { upsert: true },
                 );
             } catch (err) {
