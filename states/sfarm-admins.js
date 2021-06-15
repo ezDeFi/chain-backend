@@ -16,26 +16,26 @@ module.exports = (key) => {
     // reset the state
     // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
 
-    const getLo = (state) => {
+    const getNextFrom = (state) => {
         if (!state) {
             return FARM_GENESIS
         }
         if (state.block) {
             return state.block + 1
         }
-        return undefined    // LAST_SYNCED_BLOCK
+        return undefined    // use FRESH_BLOCK
     }
 
     return {
         key,
 
-        getRequests: async () => {
+        getRequests: async (maxRange) => {
             const state = await LogsStateModel.findOne({ key }).lean();
-            const lo = getLo(state) || FRESH_BLOCK
+            const from = getNextFrom(state) || FRESH_BLOCK
 
             return filters.map(f => ({
                 topics: f.topics,
-                lo,
+                from,
             }))
         },
 
@@ -49,19 +49,19 @@ module.exports = (key) => {
                     throw new Error(`FATAL: ${key} missing block range: ${oldBlock}-${fromBlock}`)
                 }
 
-                const lo = getLo(state) || freshBlock
+                const from = getNextFrom(state) || freshBlock
 
-                if (lo == null) {  // ignore past crawling when we're up to head
+                if (from == null) {  // ignore past crawling when we're up to head
                     return
                 }
-                if (lo > fromBlock) {
+                if (from > fromBlock) {
                     return  // ignore head logs when we're out-dated
                 }
 
                 logs = logs
                     .filter(l => addresses.includes(l.address))
                     .filter(log => log.topics[0] === filter.topics[0])
-                    .filter(log => log.blockNumber >= lo)
+                    .filter(log => log.blockNumber >= from)
 
                 let value = {...oldValue}
 

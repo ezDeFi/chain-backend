@@ -17,7 +17,7 @@ const chunkSize = {
 }
 
 const splitChunks = (from, to, count) => {
-    console.error('slpitChunks', {from, to, count})
+    // console.log('slpitChunks', {from, to, count})
     const size = Math.round((to - from) / count)
     const blocks = _.range(count).map(i => {
         const blockFrom = from + (size * i)
@@ -58,7 +58,7 @@ const _getLogs = async ({ fromBlock, toBlock, topics }, type) => {
     if (!type) {
         type = 'head'
     }
-    console.error(`_getLogs:${type}`, fromBlock, toBlock, topics)
+    // console.log(`_getLogs:${type}`, fromBlock, toBlock, topics)
     try {
         const logs = await provider.getLogs({
             topics,
@@ -98,35 +98,60 @@ const mergeTopics = (topics) => {
 }
 
 const processPast = async ({ configs }) => {
-    const requests = _.flatten(await Bluebird.map(configs, async config => await config.getRequests()))
+    const type = 'forward'
 
-    const forwardParams = await getNextForwardLogs(requests)
-    if (!!forwardParams) {
-        await Bluebird.map(configs, async config => {
-            await config.processLogs({...forwardParams});
-        });
+    const maxRange = chunkSize[type]*CONCURRENCY
+    const requests = await Bluebird.map(configs, config => config.getRequests(maxRange))
+        .then(_.flatten)
+        .filter(r => r.from != FRESH_BLOCK)
+
+    if (requests.length == 0) {
+        console.log('processPast: no requests', {maxRange})
+        return
     }
+
+    // TODO merge addresses
+    if (requests.some(r => !!r.address)) {
+        throw new Error('request with address not yet supported')
+    }
+    
+    const minRequestedBlock = Math.min(...requests.map(r => r.from))
+    const fromBlock = minRequestedBlock
+
+    const head = await provider.getBlockNumber()    // TODO: remove this call?
+    const toBlock = Math.min(fromBlock + maxRange, head)
+
+    const chunks = splitChunks(fromBlock, toBlock, CONCURRENCY);
+    const logs = await Bluebird.map(chunks, ({ from: fromBlock, to: toBlock }, i) => {
+        return getLogsInRange({ fromBlock, toBlock, requests }, type)
+    }, { concurrency: CONCURRENCY }).then(_.flatten);
+
+    if (!logs) {
+        return  // failed
+    }
+
+    return Bluebird.map(configs, config => config.processLogs({logs, fromBlock, toBlock}));
 }
 
-const getLogs = ({requests, fromBlock, toBlock}, type) => {
-    const inRangeRequests = requests.filter(r => r.lo <= toBlock)
+const getLogsInRange = ({requests, fromBlock, toBlock}, type) => {
+    const inRangeRequests = requests.filter(r => r.from <= toBlock && (!r.to || r.to >= fromBlock))
     if (inRangeRequests.length == 0) {
+        // console.log(`no request in range ${fromBlock} +${toBlock-fromBlock}`)
         return []
     }
-    const topics = mergeTopics(requests.map(r => r.topics))
+    const topics = mergeTopics(inRangeRequests.map(r => r.topics))
     return _getLogs({ fromBlock, toBlock, topics}, type)
 }
 
-const getNextForwardLogs = async(requests) => {
-    const type = 'forward'
+const processHead = async ({ configs, head }) => {
+    const maxRange = (chunkSize.head>>1)+1
 
-    console.error({requests})
-
-    requests = requests
-        .filter(r => !r.backward && r.lo != FRESH_BLOCK)
+    const requests =
+        _.flatten(await Bluebird.map(configs, async config => await config.getRequests(maxRange)))
+        .filter(r => !r.to)
 
     if (requests.length == 0) {
-        console.error('no requests')
+        console.log('processHead: no requests', {maxRange})
         return
     }
 
@@ -135,56 +160,23 @@ const getNextForwardLogs = async(requests) => {
         throw new Error('request with address not yet supported')
     }
 
-    const minRequestedBlock = Math.min(...requests.map(r => r.lo))
-    const fromBlock = minRequestedBlock
-
-    const head = await provider.getBlockNumber()    // TODO: remove this call?
-    const toBlock = Math.min(fromBlock + chunkSize[type]*CONCURRENCY, head)
-
-    const blocks = splitChunks(fromBlock, toBlock, CONCURRENCY);
-    const logs = await Bluebird.map(blocks, ({ from: fromBlock, to: toBlock }, i) => {
-        return getLogs({ fromBlock, toBlock, requests }, type)
-    }, { concurrency: CONCURRENCY }).then(_.flatten);
-
-    if (!logs) {
-        return
-    }
-
-    return { logs, fromBlock, toBlock }
-}
-
-const processHead = async ({ configs, head }) => {
     const freshBlock = (await ConfigModel.findOne({
         key: 'lastHead'
     }).lean().then(m => m && m.value) || 0) + 1;
 
-    const requests =
-        _.flatten(await Bluebird.map(configs, async config => await config.getRequests()))
-        .filter(r => !r.hi)
-
-    if (requests.length == 0) {
-        return
-    }
-
-    // TODO merge addresses
-    if (requests.some(r => !!r.address)) {
-        throw new Error('request with address not yet supported')
-    }
-
     requests.forEach(r => {
-        if (r.lo == FRESH_BLOCK) {
-            r.lo = freshBlock
+        if (r.from == FRESH_BLOCK) {
+            r.from = freshBlock
         }
     })
 
-    const minRequestedBlock = Math.min(...requests.map(r => r.lo))
-    const HEAD_BUFFER_RANGE = (chunkSize.head>>1)+1
-    const fromBlock = Math.max(minRequestedBlock, head - HEAD_BUFFER_RANGE)
+    const minRequestedBlock = Math.min(...requests.map(r => r.from))
+    const fromBlock = Math.max(minRequestedBlock, head - maxRange)
 
-    const inRangeRequests = requests.filter(r => r.lo >= fromBlock)
-    console.error({freshBlock, minRequestedBlock, fromBlock, inRangeRequests})
+    const inRangeRequests = requests.filter(r => r.from >= fromBlock)
+    // console.log({freshBlock, minRequestedBlock, fromBlock, inRangeRequests})
     if (inRangeRequests.length > 0) {
-        console.error({fromBlock, chunkSize, head})
+        // console.log({fromBlock, chunkSize, head})
 
         // TODO: merge addresses here
         const topics = mergeTopics(inRangeRequests.map(r => r.topics))
