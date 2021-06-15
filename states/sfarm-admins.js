@@ -8,7 +8,7 @@ const FARM_GENESIS = parseInt(process.env.FARM_GENESIS)
 
 const ZERO_HASH = '0x'.padEnd(66, '0')
 
-const NEXT_UNSYNCED_BLOCK = 'NEXT_UNSYNCED_BLOCK'
+const FRESH_BLOCK = 'FRESH_BLOCK'
 
 // let DEBUG_HEAD
 
@@ -44,7 +44,7 @@ module.exports = (key) => {
 
         getRequests: async () => {
             const state = await LogsStateModel.findOne({ key }).lean();
-            const lo = getLo(state) || NEXT_UNSYNCED_BLOCK
+            const lo = getLo(state) || FRESH_BLOCK
 
             return filters.map(f => ({
                 topics: f.topics,
@@ -52,7 +52,7 @@ module.exports = (key) => {
             }))
         },
 
-        processLogs: async ({ logs, fromBlock, toBlock, nextUnsyncedBlock }) => {
+        processLogs: async ({ logs, fromBlock, toBlock, freshBlock }) => {
             try {
                 const state = await LogsStateModel.findOne({ key }).lean();
                 console.error('processLogs', {state})
@@ -62,7 +62,7 @@ module.exports = (key) => {
                     throw new Error(`FATAL: ${key} missing block range: ${oldBlock}-${fromBlock}`)
                 }
 
-                const lo = getLo(state) || nextUnsyncedBlock
+                const lo = getLo(state) || freshBlock
 
                 if (lo == null) {  // ignore past crawling when we're up to head
                     return
@@ -79,7 +79,7 @@ module.exports = (key) => {
                 let value = {...oldValue}
 
                 // up to head
-                if (!nextUnsyncedBlock) {
+                if (!freshBlock) {
                     var block = toBlock
                 }
 
@@ -107,14 +107,14 @@ module.exports = (key) => {
                     { upsert: true },
                 );
             } catch (err) {
-                if (!nextUnsyncedBlock) {
+                if (!freshBlock) {
                     console.error(`ERROR in ${key}.processLogs, skip!`, err)
                     return
                 }
-                console.error(`ERROR in ${key}.processLogs, tracking last synced block ${nextUnsyncedBlock-1}`, err)
+                console.error(`ERROR in ${key}.processLogs, tracking last synced block ${freshBlock-1}`, err)
                 return LogsStateModel.updateOne(
                     { key },
-                    { block: nextUnsyncedBlock-1 },
+                    { block: freshBlock-1 },
                     { upsert: true },
                 );
             }

@@ -10,7 +10,7 @@ const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
 const CONCURRENCY = 10
-const NEXT_UNSYNCED_BLOCK = 'NEXT_UNSYNCED_BLOCK'
+const FRESH_BLOCK = 'FRESH_BLOCK'
 
 const CHUNK_SIZE_HARD_CAP = 4000;
 const TARGET_LOGS_PER_CHUNK = 500;
@@ -158,7 +158,7 @@ const getNextForwardLogs = async(requests) => {
     console.error({requests})
 
     requests = requests
-        .filter(r => !r.backward && r.lo != NEXT_UNSYNCED_BLOCK)
+        .filter(r => !r.backward && r.lo != FRESH_BLOCK)
 
     if (requests.length == 0) {
         console.error('no requests')
@@ -189,9 +189,9 @@ const getNextForwardLogs = async(requests) => {
 }
 
 const processHead = async ({ configs, head }) => {
-    const nextUnsyncedBlock = (await ConfigModel.findOne({
-        key: 'lastSyncedBlock'
-    }).lean().then(m => m && m.value) || 0) + 1;
+    const freshBlock = await ConfigModel.findOne({
+        key: 'lastHead'
+    }).lean().then(m => m ? m.value : 0) + 1;
 
     const requests =
         _.flatten(await Bluebird.map(configs, async config => await config.getRequests()))
@@ -207,8 +207,8 @@ const processHead = async ({ configs, head }) => {
     }
 
     requests.forEach(r => {
-        if (r.lo == NEXT_UNSYNCED_BLOCK) {
-            r.lo = nextUnsyncedBlock
+        if (r.lo == FRESH_BLOCK) {
+            r.lo = freshBlock
         }
     })
 
@@ -217,7 +217,7 @@ const processHead = async ({ configs, head }) => {
     const fromBlock = Math.max(minRequestedBlock, head - HEAD_BUFFER_RANGE)
 
     const inRangeRequests = requests.filter(r => r.lo >= fromBlock)
-    console.error({nextUnsyncedBlock, minRequestedBlock, fromBlock, inRangeRequests})
+    console.error({freshBlock, minRequestedBlock, fromBlock, inRangeRequests})
     if (inRangeRequests.length > 0) {
         console.error({fromBlock, CHUNK_SIZE, head})
 
@@ -232,12 +232,12 @@ const processHead = async ({ configs, head }) => {
         var toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
     
         await Bluebird.map(configs, async config => {
-            await config.processLogs({ logs, fromBlock, toBlock, nextUnsyncedBlock });
+            await config.processLogs({ logs, fromBlock, toBlock, freshBlock });
         });
     }
 
     await ConfigModel.updateOne(
-        { key: 'lastSyncedBlock' },
+        { key: 'lastHead' },
         { value: toBlock || head },
         { upsert: true },
     )
