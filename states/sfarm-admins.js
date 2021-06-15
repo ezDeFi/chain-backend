@@ -44,7 +44,6 @@ module.exports = (key) => {
 
         getRequests: async () => {
             const state = await LogsStateModel.findOne({ key }).lean();
-            // console.error('getRequests', state)
             const lo = getLo(state) || NEXT_UNSYNCED_BLOCK
 
             return filters.map(f => ({
@@ -55,31 +54,12 @@ module.exports = (key) => {
 
         processLogs: async ({ logs, fromBlock, toBlock, nextUnsyncedBlock }) => {
             try {
-                logs = logs
-                    .filter(l => addresses.includes(l.address))
-                    .filter(log => log.topics[0] === filter.topics[0])
-                console.error(`${key}.processLogs`, logs.length, fromBlock, toBlock)
-
-                // const head = !past
-
-                // DEBUG
-                // if (!past && head) {
-                //     if (DEBUG_HEAD != null && DEBUG_HEAD != fromBlock-1) {
-                //         throw new Error(`DEBUG: missing blocks: ${DEBUG_HEAD}-${fromBlock}`)
-                //     }
-                //     DEBUG_HEAD = toBlock
-                // }
-
-                if (Math.random() < 0.5) {
-                    throw "FUCK"
-                }
-
                 const state = await LogsStateModel.findOne({ key }).lean();
                 console.error('processLogs', {state})
 
                 const { value: oldValue, block: oldBlock } = {...state}
                 if (!!oldBlock && oldBlock+1 < fromBlock) {
-                    throw new Error(`Missing block range: ${oldBlock}-${fromBlock}`)
+                    throw new Error(`FATAL: ${key} missing block range: ${oldBlock}-${fromBlock}`)
                 }
 
                 const lo = getLo(state) || nextUnsyncedBlock
@@ -91,15 +71,15 @@ module.exports = (key) => {
                     return  // ignore head logs when we're out-dated
                 }
 
-                logs = logs.filter(log => log.blockNumber >= lo)
+                logs = logs
+                    .filter(l => addresses.includes(l.address))
+                    .filter(log => log.topics[0] === filter.topics[0])
+                    .filter(log => log.blockNumber >= lo)
 
                 let value = {...oldValue}
 
                 // up to head
-                if (!!nextUnsyncedBlock) {
-                    console.error('--------------')
-                } else {
-                    console.error('++++++++++++++', toBlock)
+                if (!nextUnsyncedBlock) {
                     var block = toBlock
                 }
 
