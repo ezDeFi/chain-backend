@@ -20,7 +20,10 @@ console.log('State configs', configs)
 
 provider.getBlockNumber()
     .then(processBlock)
-    .then(() => provider.on('block', processBlock))
+    .then(() => {
+        provider.on('block', processBlock)
+        crawl()
+    })
 
 let isCatchingUp = false;
 
@@ -45,4 +48,3 @@ function crawl() {
         .then(() => setTimeout(crawl))
         .catch((err) => setTimeout(crawl, 1000))
 }
-crawl()
