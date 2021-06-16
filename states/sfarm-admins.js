@@ -4,9 +4,6 @@ const contractABI = require('../ABIs/SFarm.json').abi
 const accumulating = require('./factory/accumulating')
 
 module.exports = (key) => {
-    // reset the state
-    // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
-
     const SFarm = new ethers.Contract(process.env.FARM, contractABI)
     const filter = SFarm.filters.AuthorizeAdmin(null, null)
 

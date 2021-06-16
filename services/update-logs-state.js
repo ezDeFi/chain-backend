@@ -103,14 +103,14 @@ const mergeTopics = (topics) => {
 const processPast = async ({ configs }) => {
     const type = 'forward'
 
-    const freshBlock = (await ConfigModel.findOne({
+    const lastHead = (await ConfigModel.findOne({
         key: 'lastHead'
-    }).lean().then(m => m && m.value) || 0) + 1;
+    }).lean().then(m => m && m.value) || 0);
 
     const maxRange = chunkSize[type]*CONCURRENCY
-    const requests = await Bluebird.map(configs, config => config.getRequests(maxRange, freshBlock))
+    const requests = await Bluebird.map(configs, config => config.getRequests(maxRange, lastHead))
         .then(_.flatten)
-        .filter(r => r.from < freshBlock)
+        .filter(r => r.from <= lastHead)
 
     if (!requests.length) {
         return false
@@ -119,7 +119,7 @@ const processPast = async ({ configs }) => {
     console.log('processPast', { requests })
     
     const fromBlock = Math.min(...requests.map(r => r.from))
-    const toBlock = Math.min(fromBlock + maxRange, freshBlock-1)
+    const toBlock = Math.min(fromBlock + maxRange, lastHead)
 
     const chunks = splitChunks(fromBlock, toBlock, CONCURRENCY);
     const logs = await Bluebird.map(chunks, ({ from: fromBlock, to: toBlock }, i) => {
@@ -160,19 +160,17 @@ const processHead = async ({ configs, head }) => {
         )
     }
 
-    const freshBlock = lastHead + 1;
-
-    const requests = await Bluebird.map(configs, config => config.getRequests(maxRange, freshBlock))
+    const requests = await Bluebird.map(configs, config => config.getRequests(maxRange, lastHead))
         .then(_.flatten)
-        .filter(r => r.from >= freshBlock)
+        .filter(r => r.from > lastHead)
 
     if (!requests.length) {
         return true
     }
 
-    console.log('processHead', { head, freshBlock, requests })
+    console.log('processHead', { head, lastHead, requests })
 
-    const fromBlock = freshBlock
+    const fromBlock = lastHead + 1
     if (fromBlock + maxRange <= head) {
         var toBlock = fromBlock + maxRange - 1
         var hasMoreBlock = true
@@ -190,7 +188,7 @@ const processHead = async ({ configs, head }) => {
         toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
     }
 
-    await Bluebird.map(configs, config => config.processLogs({ logs, fromBlock, toBlock, freshBlock }))
+    await Bluebird.map(configs, config => config.processLogs({ logs, fromBlock, toBlock, lastHead }))
 
     await ConfigModel.updateOne(
         { key: 'lastHead' },

@@ -3,27 +3,27 @@ const LogsStateModel = require('../../models/LogsStateModel')
 module.exports = ({key, filter, genesis, applyLogs}) => {
     const { address, topics } = filter
 
-    const getNextFrom = (state) => {
-        if (!state || !state.value) {
-            return genesis
-        }
-        if (state.range) {
-            return state.range + 1
-        }
-        return
-    }
+    // reset the state
+    // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
 
     return {
         key,
 
-        getRequests: async (maxRange, freshBlock) => {
-            const state = await LogsStateModel.findOne({ key }).lean();
-            const from = getNextFrom(state) || freshBlock
+        getRequests: async (maxRange, lastHead) => {
+            const state = await LogsStateModel.findOne({ key }).lean() || {
+                value: null,
+                range: genesis-1,
+            }
+            const from = (state.range || lastHead) + 1
             return { address, topics, from }
         },
 
-        processLogs: async ({ logs, fromBlock, toBlock, freshBlock }) => {
-            const state = await LogsStateModel.findOne({ key }).lean() || {}
+        processLogs: async ({ logs, fromBlock, toBlock, lastHead }) => {
+            // TODO: also check isHead = freshBlock && toBlock < freshBlock 
+            const state = await LogsStateModel.findOne({ key }).lean() || {
+                value: null,
+                range: genesis-1,
+            };
             // console.log('processLogs', {state, logs, fromBlock, toBlock, freshBlock})
             const oldState = {
                 value: state.value,
@@ -31,23 +31,18 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
             }
             const newState = {...oldState}
             try {
-                if (freshBlock) {
+                if (lastHead) {
                     // write ahead log for failed head update
-                    newState.range = freshBlock - 1
+                    if (!state.range) {
+                        newState.range = lastHead
+                    }
+                } else if (!state.range) {
+                    return // ignore head logs when we're out-dated
                 }
 
-                if (!!oldState.range && oldState.range+1 < fromBlock) {
-                    // throw new Error(`FATAL: ${key} missing block range: ${state.range}-${fromBlock}`)
+                const from = (state.range || lastHead) + 1
+                if (from < fromBlock) {
                     return  // out of range
-                }
-
-                const from = getNextFrom(oldState) || freshBlock
-
-                if (from == null) {  // ignore past crawling when we're up to head
-                    return
-                }
-                if (from > fromBlock) {
-                    return  // ignore head logs when we're out-dated
                 }
 
                 if (!!address) {
@@ -67,26 +62,18 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
                 newState.range = toBlock
 
             } catch (err) {
-                if (!freshBlock) {
+                if (!lastHead) {
                     console.error(`ERROR in ${key}.processLogs, skip!`, err)
                 } else {
-                    console.error(`ERROR in ${key}.processLogs, tracking last synced block ${freshBlock-1}`, err)
+                    console.error(`ERROR in ${key}.processLogs, tracking last synced block ${lastHead}`, err)
                 }
             } finally {
-                if (JSON.stringify(newState.value) == JSON.stringify(oldState.value)) {
-                    delete newState.value
-                }
-
-                if (freshBlock && newState.range === toBlock) {
+                if (lastHead && newState.range === toBlock) {
                     newState.range = null
                 }
 
-                if (JSON.stringify(newState.range) == JSON.stringify(oldState.range)) {
-                    delete newState.range
-                }
-
-                if (!Object.keys(newState).length) {
-                    return
+                if (JSON.stringify(newState) == JSON.stringify(oldState)) {
+                    return // no data change
                 }
 
                 console.error(`accumulating:${key} update db`, newState)
