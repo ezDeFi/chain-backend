@@ -45,16 +45,30 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
         },
 
         processLogs: async ({ logs, fromBlock, toBlock, freshBlock }) => {
-            const state = await LogsStateModel.findOne({ key }).lean();
+            const state = await LogsStateModel.findOne({ key }).lean() || {}
             // console.log('processLogs', {state, logs, fromBlock, toBlock, freshBlock})
-            const { value: oldValue, range: oldRange } = {...state}
-            const { lo, hi } = oldRange || {}
+            const oldState = {
+                value: state.value,
+                range: state.range,
+            }
+            const newState = {
+                value: oldState.value,
+                range: oldState.range || {},
+            }
             try {
+                if (freshBlock) {
+                    // write ahead log for failed head update
+                    newState.range.hi = freshBlock - 1
+                }
+
+                const { lo, hi } = newState.range
                 if (!!lo && toBlock < lo-1) {
-                    throw new Error(`FATAL: ${key} missing block range: ${toBlock}-${lo-1}`)
+                    // throw new Error(`FATAL: ${key} missing block range: ${toBlock}-${lo-1}`)
+                    return  // out of range
                 }
                 if (!!hi && hi+1 < fromBlock) {
-                    throw new Error(`FATAL: ${key} missing block range: ${hi}-${fromBlock}`)
+                    // throw new Error(`FATAL: ${key} missing block range: ${hi}-${fromBlock}`)
+                    return  // out of range
                 }
 
                 if (!!address) {
@@ -65,54 +79,43 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
                     }
                 }
 
-                logs = logs.filter(log => !topics.some((topic, i) => topic && log.topics[i] !== topic))
-
-                const newState = {}
-
-                if (freshBlock) {
-                    let from = fromBlock
-                    if (!!hi && hi+1 > fromBlock) {
-                        from = hi+1
-                    }
-
-                    logs = logs.filter(log => from <= log.blockNumber)
-
-                    if (hi) {
-                        newState.range = { lo, hi: undefined }
-                    }
-                } else {
-                    const to = Math.min(toBlock, lo-1)
-                    logs = logs.filter(log => log.blockNumber <= to)
-
-                    newState.range = { lo: fromBlock, hi }
-                }
+                logs = logs
+                    .filter(log => log.blockNumber >= Math.max(fromBlock, (hi||0)+1))
+                    .filter(log => log.blockNumber <= Math.min(toBlock, (lo||Number.MAX_SAFE_INTEGER)-1))
+                    .filter(log => !topics.some((topic, i) => topic && log.topics[i] !== topic))
 
                 // APPLY LOGS TO OLD VALUE
-                const value = await applyLogs(oldValue, logs)
+                newState.value = await applyLogs(oldState.value, logs)
+                newState.range.lo = fromBlock
+                newState.range.hi = toBlock
 
-                if (JSON.stringify(value) != JSON.stringify(oldValue)) {
-                    newState.value = value
-                }
-
-                if (Object.keys(newState).length == 0) {
-                    // nothing to update
-                    return
-                }
-
-                return LogsStateModel.updateOne(
-                    { key },
-                    newState,
-                    { upsert: true },
-                );
             } catch (err) {
                 if (!freshBlock) {
                     console.error(`ERROR in ${key}.processLogs, skip!`, err)
+                } else {
+                    console.error(`ERROR in ${key}.processLogs, tracking last synced block ${freshBlock-1}`, err)
+                }
+            } finally {
+                if (JSON.stringify(newState.value) == JSON.stringify(oldState.value)) {
+                    delete newState.value
+                }
+
+                if (freshBlock && newState.range.hi === toBlock) {
+                    newState.range.hi = null
+                }
+
+                if (JSON.stringify(newState.range) == JSON.stringify(oldState.range)) {
+                    delete newState.range
+                }
+
+                if (!Object.keys(newState).length) {
                     return
                 }
-                console.error(`ERROR in ${key}.processLogs, tracking last synced block ${freshBlock-1}`, err)
+
+                console.error(`sync:${key} update db`, newState)
                 return LogsStateModel.updateOne(
                     { key },
-                    { range: { lo, hi: freshBlock-1} },
+                    newState,
                     { upsert: true },
                 );
             }

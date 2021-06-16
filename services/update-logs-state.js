@@ -116,8 +116,8 @@ const processPast = async ({ configs }) => {
         .then(_.flatten)
         .filter(r => r.from < freshBlock)
 
-    if (requests.length == 0) {
-        return
+    if (!requests.length) {
+        return false
     }
 
     console.log('processPast', { requests })
@@ -131,7 +131,7 @@ const processPast = async ({ configs }) => {
     }, { concurrency: CONCURRENCY }).then(_.flatten);
 
     if (!logs) {
-        return  // failed
+        return false // failed
     }
 
     return Bluebird.map(configs, config => config.processLogs({ logs, fromBlock, toBlock }))
@@ -151,15 +151,26 @@ const getLogsInRange = ({requests, fromBlock, toBlock}, type) => {
 const processHead = async ({ configs, head }) => {
     const maxRange = (chunkSize.head>>1)+1
 
-    const freshBlock = (await ConfigModel.findOne({
+    let lastHead = await ConfigModel.findOne({
         key: 'lastHead'
-    }).lean().then(m => m && m.value) || head - maxRange) + 1;
+    }).lean().then(m => m && m.value)
+
+    if (!lastHead) {    // init the first sync
+        lastHead = head - maxRange
+        await ConfigModel.updateOne(
+            { key: 'lastHead' },
+            { value: lastHead },
+            { upsert: true },
+        )
+    }
+
+    const freshBlock = lastHead + 1;
 
     const requests = await Bluebird.map(configs, config => config.getRequests(maxRange, freshBlock))
         .then(_.flatten)
         .filter(r => r.from >= freshBlock)
 
-    if (requests.length == 0) {
+    if (!requests.length) {
         return true
     }
 

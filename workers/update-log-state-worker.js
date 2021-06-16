@@ -18,24 +18,29 @@ require("fs").readdirSync(normalizedPath).forEach(file => {
 
 console.log('State configs', configs)
 
+provider.getBlockNumber()
+    .then(processBlock)
+    .then(() => provider.on('block', processBlock))
+
 let isCatchingUp = false;
-provider.on('block', async head => {
+
+async function processBlock(head) {
     console.log('New block', head)
     if (isCatchingUp) {
         return;
     }
     try {
         isCatchingUp = true;
-        await processHead({ configs, head })
+        return processHead({ configs, head })
     } catch (error) {
         console.error(error.message)
     } finally {
         isCatchingUp = false;
     }
-})
+}
 
 function crawl() {
-    console.error('crawling...')
+    // console.error('crawling...')
     processPast({ configs })
         .then(() => setTimeout(crawl))
         .catch((err) => setTimeout(crawl, 1000))
