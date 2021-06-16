@@ -40,9 +40,7 @@ const chunkSizeUp = (type) => {
     newSize = Math.min(CHUNK_SIZE_HARD_CAP, newSize)
     if (newSize > oldSize) {
         chunkSize[type] = newSize
-        console.error(`getLogs: CHUNK_SIZE (${type}) increased to ${newSize}`)
-    } else {
-        console.error(`getLogs: CHUNK_SIZE (${type}) unchanged ${newSize}`)
+        console.log(`getLogs: CHUNK_SIZE (${type}) increased to ${newSize}`)
     }
 }
 
@@ -53,9 +51,7 @@ const chunkSizeDown = (type) => {
     newSize = Math.max(1, newSize)
     if (newSize < oldSize) {
         chunkSize[type] = newSize
-        console.error(`getLogs: CHUNK_SIZE (${type}) decreased to ${chunkSize[type]}`)
-    } else {
-        console.error(`getLogs: CHUNK_SIZE (${type}) unchanged ${chunkSize[type]}`)
+        console.log(`getLogs: CHUNK_SIZE (${type}) decreased to ${chunkSize[type]}`)
     }
 }
 
