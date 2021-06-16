@@ -7,8 +7,7 @@ module.exports = (key) => {
     // reset the state
     // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
 
-    const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
-    const SFarm = new ethers.Contract(process.env.FARM, contractABI, provider)
+    const SFarm = new ethers.Contract(process.env.FARM, contractABI)
     const filter = SFarm.filters.AuthorizeAdmin(null, null)
 
     return accumulating({
@@ -27,6 +26,10 @@ module.exports = (key) => {
                     const enable = log.data != ZERO_HASH
                     changes[admin] = enable
                 }
+            }
+
+            if (Object.keys(changes).length == 0) {
+                return value
             }
 
             return Object.assign({...value}, changes)

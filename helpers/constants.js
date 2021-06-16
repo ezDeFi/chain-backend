@@ -13,7 +13,6 @@ exports.hexes = {
 }
 
 exports.getlogs = {
-	FRESH_BLOCK: 'FRESH_BLOCK',
 	CONCURRENCY: 10,
 	CHUNK_SIZE_HARD_CAP: 4000,
 	TARGET_LOGS_PER_CHUNK: 500,

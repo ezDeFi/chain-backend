@@ -6,7 +6,7 @@ var Schema = mongoose.Schema;
 var LogsStateSchema = new Schema({
     key:    { type: String,                 required: true },
     value:  { type: Schema.Types.Mixed,     required: true },
-    block:  { type: Schema.Types.Number,    required: false },
+    range:  { type: Schema.Types.Mixed,     required: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model("LogsState", LogsStateSchema);

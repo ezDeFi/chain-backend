@@ -1,30 +1,25 @@
-const { FRESH_BLOCK } = require('../../helpers/constants').getlogs
 const LogsStateModel = require('../../models/LogsStateModel')
 
 module.exports = ({key, filter, genesis, applyLogs}) => {
+    const { address, topics } = filter
 
     const getNextFrom = (state) => {
         if (!state) {
             return genesis
         }
-        if (state.block) {
-            return state.block + 1
+        if (state.range) {
+            return state.range + 1
         }
-        return undefined    // use FRESH_BLOCK
+        return
     }
 
     return {
         key,
 
-        getRequests: async (maxRange) => {
+        getRequests: async (maxRange, freshBlock) => {
             const state = await LogsStateModel.findOne({ key }).lean();
-            const from = getNextFrom(state) || FRESH_BLOCK
-
-            return {
-                address: filter.address,
-                topics: filter.topics,
-                from,
-            }
+            const from = getNextFrom(state) || freshBlock
+            return { address, topics, from }
         },
 
         processLogs: async ({ logs, fromBlock, toBlock, freshBlock }) => {
@@ -32,7 +27,7 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
                 const state = await LogsStateModel.findOne({ key }).lean();
                 // console.log('processLogs', {state, logs, fromBlock, toBlock, freshBlock})
 
-                const { value: oldValue, block: oldBlock } = {...state}
+                const { value: oldValue, range: oldBlock } = {...state}
                 if (!!oldBlock && oldBlock+1 < fromBlock) {
                     throw new Error(`FATAL: ${key} missing block range: ${oldBlock}-${fromBlock}`)
                 }
@@ -52,6 +47,8 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
                     !filter.topics.some((topic, i) => topic && log.topics[i] !== topic)
                 )
 
+                console.error('==============', {oldValue, logs})
+
                 // APPLY LOGS TO OLD VALUE
                 const value = await applyLogs(oldValue, logs)
 
@@ -59,7 +56,9 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
 
                 if (!freshBlock) {
                     // always update state block in past sync
-                    newState.block = toBlock
+                    newState.range = toBlock
+                } else if (oldBlock) {
+                    newState.range = undefined
                 }
 
                 if (JSON.stringify(value) != JSON.stringify(oldValue)) {
@@ -81,11 +80,11 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
                     console.error(`ERROR in ${key}.processLogs, skip!`, err)
                     return
                 }
-                const block = freshBlock-1
-                console.error(`ERROR in ${key}.processLogs, tracking last synced block ${block}`, err)
+                const range = freshBlock-1
+                console.error(`ERROR in ${key}.processLogs, tracking last synced block ${range}`, err)
                 return LogsStateModel.updateOne(
                     { key },
-                    { block },
+                    { range },
                     { upsert: true },
                 );
             }

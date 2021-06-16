@@ -1,7 +1,7 @@
 const Bluebird = require('bluebird')
 const _ = require('lodash')
 const { JsonRpcProvider } = require('@ethersproject/providers')
-const { FRESH_BLOCK, CONCURRENCY, CHUNK_SIZE_HARD_CAP, TARGET_LOGS_PER_CHUNK } = require('../helpers/constants').getlogs
+const { CONCURRENCY, CHUNK_SIZE_HARD_CAP, TARGET_LOGS_PER_CHUNK } = require('../helpers/constants').getlogs
 const provider = new JsonRpcProvider({
 	timeout: 3000,
 	url: process.env.RPC,
@@ -71,6 +71,7 @@ const _getLogs = async ({ address, fromBlock, toBlock, topics }, type) => {
             fromBlock,
             toBlock,
         });
+        // console.log({logs})
         if (!Array.isArray(logs)) {
             throw new Error(JSON.stringify(logs));
         }
@@ -106,32 +107,34 @@ const mergeTopics = (topics) => {
 const processPast = async ({ configs }) => {
     const type = 'forward'
 
+    const freshBlock = (await ConfigModel.findOne({
+        key: 'lastHead'
+    }).lean().then(m => m && m.value) || 0) + 1;
+
     const maxRange = chunkSize[type]*CONCURRENCY
-    const requests = await Bluebird.map(configs, config => config.getRequests(maxRange))
+    const requests = await Bluebird.map(configs, config => config.getRequests(maxRange, freshBlock))
         .then(_.flatten)
-        .filter(r => r.from != FRESH_BLOCK)
+        .filter(r => r.from < freshBlock)
 
     if (requests.length == 0) {
-        console.log('processPast: no requests', {maxRange})
         return
     }
-    
-    const minRequestedBlock = Math.min(...requests.map(r => r.from))
-    const fromBlock = minRequestedBlock
 
-    const head = await provider.getBlockNumber()    // TODO: remove this call?
-    const toBlock = Math.min(fromBlock + maxRange, head)
+    console.log('processPast', { requests })
+    
+    const fromBlock = Math.min(...requests.map(r => r.from))
+    const toBlock = Math.min(fromBlock + maxRange, freshBlock-1)
 
     const chunks = splitChunks(fromBlock, toBlock, CONCURRENCY);
     const logs = await Bluebird.map(chunks, ({ from: fromBlock, to: toBlock }, i) => {
-        return getLogsInRange({ fromBlock, toBlock, requests }, type)
+        return getLogsInRange({ requests, fromBlock, toBlock }, type)
     }, { concurrency: CONCURRENCY }).then(_.flatten);
 
     if (!logs) {
         return  // failed
     }
 
-    return Bluebird.map(configs, config => config.processLogs({logs, fromBlock, toBlock}));
+    return Bluebird.map(configs, config => config.processLogs({ logs, fromBlock, toBlock }))
 }
 
 const getLogsInRange = ({requests, fromBlock, toBlock}, type) => {
@@ -148,53 +151,47 @@ const getLogsInRange = ({requests, fromBlock, toBlock}, type) => {
 const processHead = async ({ configs, head }) => {
     const maxRange = (chunkSize.head>>1)+1
 
-    const requests =
-        _.flatten(await Bluebird.map(configs, async config => await config.getRequests(maxRange)))
-        .filter(r => !r.to)
-
-    if (requests.length == 0) {
-        console.log('processHead: no requests', {maxRange})
-        return
-    }
-
     const freshBlock = (await ConfigModel.findOne({
         key: 'lastHead'
-    }).lean().then(m => m && m.value) || 0) + 1;
+    }).lean().then(m => m && m.value) || head - maxRange) + 1;
 
-    requests.forEach(r => {
-        if (r.from == FRESH_BLOCK) {
-            r.from = freshBlock
-        }
-    })
+    const requests = await Bluebird.map(configs, config => config.getRequests(maxRange, freshBlock))
+        .then(_.flatten)
+        .filter(r => r.from >= freshBlock)
 
-    const minRequestedBlock = Math.min(...requests.map(r => r.from))
-    const fromBlock = Math.max(minRequestedBlock, head - maxRange)
-
-    const inRangeRequests = requests.filter(r => r.from >= fromBlock)
-    // console.log({freshBlock, minRequestedBlock, fromBlock, inRangeRequests})
-    if (inRangeRequests.length > 0) {
-        // console.log({fromBlock, chunkSize, head})
-
-        const address = inRangeRequests.filter(r => !!r.address).map(r => r.address)
-        const topics = mergeTopics(inRangeRequests.map(r => r.topics))
-        const logs = await _getLogs({ address, fromBlock, topics })
-    
-        if (!logs) {
-            return  // failed
-        }
-    
-        var toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
-    
-        await Bluebird.map(configs, async config => {
-            await config.processLogs({ logs, fromBlock, toBlock, freshBlock });
-        });
+    if (requests.length == 0) {
+        return true
     }
+
+    console.log('processHead', { head, freshBlock, requests })
+
+    const fromBlock = freshBlock
+    if (fromBlock + maxRange <= head) {
+        var toBlock = fromBlock + maxRange - 1
+        var hasMoreBlock = true
+    }
+
+    const address = requests.filter(r => !!r.address).map(r => r.address)
+    const topics = mergeTopics(requests.map(r => r.topics))
+    const logs = await _getLogs({ address, topics, fromBlock, toBlock })
+
+    if (!logs) {
+        return false // failed
+    }
+
+    if (!toBlock) {
+        toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
+    }
+
+    await Bluebird.map(configs, config => config.processLogs({ logs, fromBlock, toBlock, freshBlock }))
 
     await ConfigModel.updateOne(
         { key: 'lastHead' },
-        { value: toBlock || head },
+        { value: toBlock },
         { upsert: true },
     )
+
+    return !!hasMoreBlock
 }
 
 exports.processHead = processHead;
