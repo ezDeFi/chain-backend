@@ -77,7 +77,7 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
     return {
         key,
 
-        getRequests: async ({maxRange, lastHead, head}) => {
+        getRequests: async ({maxRange, lastHead}) => {
             const { address, topics } = filter
 
             const state = await LogsStateModel.findOne({ key }).lean() || {
@@ -88,11 +88,9 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
                 }
             }
 
-            if (head) {
                 const hi = state.range.hi || lastHead
                 const from = hi + 1
-                return { address, topics, from, processLogs }
-            }
+            const requests = [{ address, topics, from, processLogs }]
 
             // crawl back is needed only when there's no value found in fresh blocks
             if (state.value == null) {
@@ -100,11 +98,12 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
                 const to = state.range.lo - 1
                 const from = Math.max(to - maxRange, genesis || 0)
                 if (from <= to) {
-                    return { address, topics, from, to, processLogs }
+                    requests.push({ address, topics, from, to, processLogs })
                 }
             }
 
-            return []
+
+            return requests
         },
     }
 }

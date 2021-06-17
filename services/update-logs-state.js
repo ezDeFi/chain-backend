@@ -162,7 +162,7 @@ const processHead = async ({ configs, head }) => {
         )
     }
 
-    const requests = await Bluebird.map(configs, config => config.getRequests({maxRange, lastHead, head}))
+    const requests = await Bluebird.map(configs, config => config.getRequests({maxRange, lastHead}))
         .then(_.flatten)
         .filter(r => r.from > lastHead)
 
