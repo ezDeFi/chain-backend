@@ -45,6 +45,6 @@ async function processBlock(head) {
 function crawl() {
     // console.error('crawling...')
     processPast({ configs })
-        .then(() => setTimeout(crawl))
+        .then(nextDelay => setTimeout(crawl, nextDelay))
         .catch((err) => setTimeout(crawl, 1000))
 }
