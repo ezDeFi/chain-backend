@@ -4,8 +4,11 @@ const contractABI = require('../ABIs/SFarm.json').abi
 const accumulator = require('./factory/ac')
 
 module.exports = (key) => {
+    // reset the state
+    // require('../models/LogsStateModel').deleteOne({ key }).then(console.error).catch(console.error)
+
     const SFarm = new ethers.Contract(process.env.FARM, contractABI)
-    const filter = SFarm.filters.AuthorizeAdmin(null, null)
+    const filter = SFarm.filters.AuthorizeFarmer(null, null)
 
     return accumulator({
         key,
@@ -13,23 +16,19 @@ module.exports = (key) => {
         genesis: parseInt(process.env.FARM_GENESIS),
 
         applyLogs: (value, logs) => {
-            const changes = {}
+            value = {...value}
 
             // assume that the logs is sorted by blockNumber and transactionIndex
-            for (let i = logs.length-1; i >= 0; --i) {
-                const log = logs[i]
-                const admin = '0x'+log.topics[1].slice(26)
-                if (!changes.hasOwnProperty(admin)) {
-                    const enable = log.data != ZERO_HASH
-                    changes[admin] = enable
+            logs.forEach(log => {
+                const address = '0x'+log.topics[1].slice(26)
+                if (log.data != ZERO_HASH) {
+                    value[address] = true
+                } else {
+                    delete value[address]
                 }
-            }
+            })
 
-            if (Object.keys(changes).length == 0) {
-                return value
-            }
-
-            return Object.assign({...value}, changes)
+            return value
         }
     })
 }
