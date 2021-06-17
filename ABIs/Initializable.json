@@ -1,0 +1,179 @@
+{
+  "contractName": "Initializable",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "metadata": "{\"compiler\":{\"version\":\"0.6.2+commit.bacdbe57\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Zergity \",\"methods\":{}},\"userdoc\":{\"methods\":{\"initialize()\":{\"notice\":\"func signature: 8129fc1c\"}}}},\"settings\":{\"compilationTarget\":{\"/home/zergity/src/github.com/ezDeFi/sfarm-contracts/contracts/interfaces/Initializable.sol\":\"Initializable\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":6000000},\"remappings\":[]},\"sources\":{\"/home/zergity/src/github.com/ezDeFi/sfarm-contracts/contracts/interfaces/Initializable.sol\":{\"keccak256\":\"0x0c3f056fbe76fc59ca6d6e81811bb060d118d243bcaf1f1d9ed2f6fbb49023cc\",\"urls\":[\"bzz-raw://a1aa23480494060807b969528e05729b16e05af17ecc2055aa816cb88b7cdc78\",\"dweb:/ipfs/QmXPoQZiyp52rjLeoHaW1MiWXJ1qDAmZyaMXEJkZfAyDJU\"]}},\"version\":1}",
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "sourceMap": "",
+  "deployedSourceMap": "",
+  "source": "// SPDX-License-Identifier: MIT\npragma solidity >=0.6.2;\n\n/** @title Initializable */\n/** @author Zergity */\n\ninterface Initializable {\n    /// func signature: 8129fc1c\n    function initialize() external;\n}\n",
+  "sourcePath": "/home/zergity/src/github.com/ezDeFi/sfarm-contracts/contracts/interfaces/Initializable.sol",
+  "ast": {
+    "absolutePath": "/home/zergity/src/github.com/ezDeFi/sfarm-contracts/contracts/interfaces/Initializable.sol",
+    "exportedSymbols": {
+      "Initializable": [
+        2738
+      ]
+    },
+    "id": 2739,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 2734,
+        "literals": [
+          "solidity",
+          ">=",
+          "0.6",
+          ".2"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "32:24:7"
+      },
+      {
+        "abstract": false,
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": "@author Zergity ",
+        "fullyImplemented": false,
+        "id": 2738,
+        "linearizedBaseContracts": [
+          2738
+        ],
+        "name": "Initializable",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "body": null,
+            "documentation": "func signature: 8129fc1c",
+            "functionSelector": "8129fc1c",
+            "id": 2737,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "initialize",
+            "nodeType": "FunctionDefinition",
+            "overrides": null,
+            "parameters": {
+              "id": 2735,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "192:2:7"
+            },
+            "returnParameters": {
+              "id": 2736,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "203:0:7"
+            },
+            "scope": 2738,
+            "src": "173:31:7",
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "scope": 2739,
+        "src": "110:96:7"
+      }
+    ],
+    "src": "32:175:7"
+  },
+  "legacyAST": {
+    "absolutePath": "/home/zergity/src/github.com/ezDeFi/sfarm-contracts/contracts/interfaces/Initializable.sol",
+    "exportedSymbols": {
+      "Initializable": [
+        2738
+      ]
+    },
+    "id": 2739,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 2734,
+        "literals": [
+          "solidity",
+          ">=",
+          "0.6",
+          ".2"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "32:24:7"
+      },
+      {
+        "abstract": false,
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": "@author Zergity ",
+        "fullyImplemented": false,
+        "id": 2738,
+        "linearizedBaseContracts": [
+          2738
+        ],
+        "name": "Initializable",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "body": null,
+            "documentation": "func signature: 8129fc1c",
+            "functionSelector": "8129fc1c",
+            "id": 2737,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "initialize",
+            "nodeType": "FunctionDefinition",
+            "overrides": null,
+            "parameters": {
+              "id": 2735,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "192:2:7"
+            },
+            "returnParameters": {
+              "id": 2736,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "203:0:7"
+            },
+            "scope": 2738,
+            "src": "173:31:7",
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "scope": 2739,
+        "src": "110:96:7"
+      }
+    ],
+    "src": "32:175:7"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.6.2+commit.bacdbe57.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.2.4",
+  "updatedAt": "2021-05-28T15:27:51.038Z",
+  "devdoc": {
+    "author": "Zergity ",
+    "methods": {}
+  },
+  "userdoc": {
+    "methods": {
+      "initialize()": {
+        "notice": "func signature: 8129fc1c"
+      }
+    }
+  }
+}
