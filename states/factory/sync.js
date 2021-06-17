@@ -20,11 +20,11 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
         // console.log('processLogs', {state, logs, fromBlock, toBlock, lastHead})
         const oldState = {
             value: state.value,
-            range: state.range,
+            range: {...state.range},
         }
         const newState = {
             value: oldState.value,
-            range: oldState.range,
+            range: {...oldState.range},
         }
         try {
             if (head) {
