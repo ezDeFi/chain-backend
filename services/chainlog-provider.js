@@ -132,7 +132,8 @@ const processPast = async ({ configs }) => {
 
     requests = requests.filter(r => r.from <= toBlock && (!r.to || r.to >= fromBlock))
 
-    console.log('processPast', { lastHead, fromBlock, toBlock, requests })
+    console.log('PAST ----', { lastHead, fromBlock, toBlock })
+    console.log(requests.map(({key, from, to}) => `\t${key}:\t${from}${to ? ` +${to-from}` : ''}`).join('\n'))
 
     const chunks = splitChunks(fromBlock, toBlock, CONCURRENCY);
     const logs = await Bluebird.map(chunks, ({ from: fromBlock, to: toBlock }, i) => {
@@ -174,7 +175,8 @@ const processHead = async ({ configs, head }) => {
         return true
     }
 
-    console.log('processHead', { head, lastHead, requests })
+    console.log('++++ HEAD', { lastHead, head })
+    console.log(requests.map(({key, from, to}) => `\t${key}:\t${from}${to ? ` +${to-from}` : ''}`).join('\n'))
 
     const fromBlock = lastHead + 1
     if (fromBlock + maxRange <= head) {

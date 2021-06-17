@@ -82,7 +82,7 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
                 range: genesis-1,
             }
             const from = (state.range || lastHead) + 1
-            return { address, topics, from, processLogs }
+            return { key, address, topics, from, processLogs }
         },
     }
 }

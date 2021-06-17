@@ -90,7 +90,7 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
 
                 const hi = state.range.hi || lastHead
                 const from = hi + 1
-            const requests = [{ address, topics, from, processLogs }]
+            const requests = [{ key, address, topics, from, processLogs }]
 
             // crawl back is needed only when there's no value found in fresh blocks
             if (state.value == null) {
@@ -98,7 +98,7 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
                 const to = state.range.lo - 1
                 const from = Math.max(to - maxRange, genesis || 0)
                 if (from <= to) {
-                    requests.push({ address, topics, from, to, processLogs })
+                    requests.push({ key, address, topics, from, to, processLogs })
                 }
             }
 
