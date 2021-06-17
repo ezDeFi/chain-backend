@@ -1,13 +1,13 @@
 const { ethers } = require('ethers')
 const { ZERO_HASH } = require('../helpers/constants').hexes
 const contractABI = require('../ABIs/SFarm.json').abi
-const accumulating = require('./factory/ac')
+const accumulator = require('./factory/ac')
 
 module.exports = (key) => {
     const SFarm = new ethers.Contract(process.env.FARM, contractABI)
     const filter = SFarm.filters.AuthorizeAdmin(null, null)
 
-    return accumulating({
+    return accumulator({
         key,
         filter,
         genesis: parseInt(process.env.FARM_GENESIS),
