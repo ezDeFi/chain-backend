@@ -1,22 +1,21 @@
 const { ethers } = require('ethers')
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
 const path = require("path")
-const { processHead, processPast } = require('../services/update-logs-state')
+const { processHead, processPast } = require('../services/chainlog-provider')
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
-const statePath = "../states"
-const configs = []
+const consumers = []
 
-const normalizedPath = path.join(__dirname, statePath);
+const normalizedPath = path.join(__dirname, "../consumers");
 require("fs").readdirSync(normalizedPath).forEach(file => {
     if (path.extname(file) == '.js') {
         const key = file.split('.').slice(0, -1).join('.')
-        configs.push(require(`${normalizedPath}/${key}`)(key))
+        consumers.push(require(`${normalizedPath}/${key}`)(key))
     }
 })
 
-console.log('State configs', configs)
+console.log('State consumers', consumers)
 
 provider.getBlockNumber()
     .then(processBlock)
@@ -34,7 +33,7 @@ async function processBlock(head) {
     }
     try {
         isCatchingUp = true;
-        return processHead({ configs, head })
+        return processHead({ configs: consumers, head })
     } catch (error) {
         console.error(error.message)
     } finally {
@@ -44,7 +43,7 @@ async function processBlock(head) {
 
 function crawl() {
     // console.error('crawling...')
-    processPast({ configs })
+    processPast({ configs: consumers })
         .then(nextDelay => setTimeout(crawl, nextDelay))
         .catch((err) => setTimeout(crawl, 1000))
 }

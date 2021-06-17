@@ -1,5 +1,5 @@
 const LogsStateModel = require('../../models/LogsStateModel')
-const { filterLogs } = require('../helpers/filter')
+const { filterLogs } = require('../../helpers/logs')
 
 module.exports = ({key, filter, genesis, applyLogs}) => {
     // reset the state

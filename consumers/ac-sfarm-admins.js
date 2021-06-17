@@ -1,7 +1,7 @@
 const { ethers } = require('ethers')
 const { ZERO_HASH } = require('../helpers/constants').hexes
 const contractABI = require('../ABIs/SFarm.json').abi
-const accumulating = require('./factory/accumulating')
+const accumulating = require('./factory/ac')
 
 module.exports = (key) => {
     const SFarm = new ethers.Contract(process.env.FARM, contractABI)

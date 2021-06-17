@@ -1,9 +1,9 @@
 const LogsStateModel = require('../../models/LogsStateModel')
-const { filterLogs } = require('../helpers/filter')
+const { filterLogs } = require('../../helpers/logs')
 
 module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
     // reset the state
-    LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
+    // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
 
     const processLogs = async ({ request, logs, fromBlock, toBlock, lastHead, head }) => {
         // TODO: handle synchronization
