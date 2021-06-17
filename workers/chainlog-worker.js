@@ -7,13 +7,6 @@ mongoose.set("useFindAndModify", false);
 
 const consumers = []
 
-const normalizedPath = path.join(__dirname, "../consumers");
-require("fs").readdirSync(normalizedPath).forEach(file => {
-    if (path.extname(file) == '.js') {
-        const key = file.split('.').slice(0, -1).join('.')
-        consumers.push(require(`${normalizedPath}/${key}`)(key))
-    }
-})
 
 console.log('State consumers', consumers)
 

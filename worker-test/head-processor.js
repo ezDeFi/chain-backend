@@ -3,16 +3,20 @@
 const assert = require('assert')
 const ioc = require('@trop/ioc')
 const {
+    ChunkSize,
+    LogProvider,
+    HeadProcessor
+} = require('../services')
+const {
     Mongodb,
-    StateProvider,
+    ConsumerLoader,
     EthersProvider,
-    HeadBlockProcessor
-} = require('./types')
+} = require('./mock-service')
 
-describe('HeadBlockProcessor', () => {
+describe('HeadProcessor', () => {
     let container
-    let stateCollection
-    let stateProvider
+    let configCollection
+    let consumerLoader
     let ethersProvider
     let processor
 
@@ -23,12 +27,14 @@ describe('HeadBlockProcessor', () => {
 
         container = await ioc.new_container(config, {
             'mongodb': Mongodb,
-            'stateProvider': StateProvider,
+            'chunkSize': ChunkSize,
+            'consumerLoader': ConsumerLoader,
             'ethersProvider': EthersProvider,
-            'headProcessor': HeadBlockProcessor
+            'logProvider': LogProvider,
+            'headProcessor': HeadProcessor
         })
-        stateCollection = container.get('mongodb').stateCollection
-        stateProvider = container.get('stateProvider')
+        configCollection = container.get('mongodb').configCollection
+        consumerLoader = container.get('consumerLoader')
         ethersProvider = container.get('ethersProvider')
         processor = container.get('headProcessor')
     })
@@ -38,24 +44,14 @@ describe('HeadBlockProcessor', () => {
     })
 
     it('step 1', async() => {
-        stateProvider.mock(['step_1'])
+        consumerLoader.mock(['consumers/sync-pc-usdt-busd'])
         ethersProvider.mockGetLogs('step_1')
 
         let head = 0
 
         await processor.process(head)
 
-        let dbHead = await stateCollection.findOne({}, { _id: 0 })
-
-        assert.deepStrictEqual(dbHead, { head })
-    })
-
-    it('step 2', async() => {
-        let head = 1
-
-        await processor.process(head)
-
-        let dbHead = await stateCollection.findOne({}, { _id: 0 })
+        let dbHead = await configCollection.findOne({}, { _id: 0 })
 
         assert.deepStrictEqual(dbHead, { head })
     })
