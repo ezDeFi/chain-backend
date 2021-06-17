@@ -8,7 +8,20 @@ exports.query = [
 	async function (req, res) {
 		try {
 			const { key } = req.params
-			const keys = key.split(',')
+			if (!key) {
+				var keys = []
+				const path = require("path")
+				const normalizedPath = path.join(__dirname, "../consumers");
+				require("fs").readdirSync(normalizedPath).forEach(file => {
+					if (path.extname(file) == '.js') {
+						const key = file.split('.').slice(0, -1).join('.')
+						keys.push(key)
+					}
+				})
+			} else {
+				var keys = key.split(',')
+			}
+
 			const states = await LogsStateModel.find({ key: { $in: keys } }).lean()
 			const ret = states
 				.filter(s => !!s)
