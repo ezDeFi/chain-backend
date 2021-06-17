@@ -100,6 +100,17 @@ const mergeTopics = (topics) => {
         })
 }
 
+const getLogsInRange = ({requests, fromBlock, toBlock}, type) => {
+    const inRangeRequests = requests.filter(r => r.from <= toBlock && (!r.to || r.to >= fromBlock))
+    if (inRangeRequests.length == 0) {
+        // console.log(`no request in range ${fromBlock} +${toBlock-fromBlock}`)
+        return []
+    }
+    const address = inRangeRequests.filter(r => !!r.address).map(r => r.address)
+    const topics = mergeTopics(inRangeRequests.map(r => r.topics))
+    return _getLogs({ address, fromBlock, toBlock, topics}, type)
+}
+
 const processPast = async ({ configs }) => {
     const type = 'forward'
 
@@ -131,17 +142,6 @@ const processPast = async ({ configs }) => {
     }
 
     return Bluebird.map(configs, config => config.processLogs({ logs, fromBlock, toBlock }))
-}
-
-const getLogsInRange = ({requests, fromBlock, toBlock}, type) => {
-    const inRangeRequests = requests.filter(r => r.from <= toBlock && (!r.to || r.to >= fromBlock))
-    if (inRangeRequests.length == 0) {
-        // console.log(`no request in range ${fromBlock} +${toBlock-fromBlock}`)
-        return []
-    }
-    const address = inRangeRequests.filter(r => !!r.address).map(r => r.address)
-    const topics = mergeTopics(inRangeRequests.map(r => r.topics))
-    return _getLogs({ address, fromBlock, toBlock, topics}, type)
 }
 
 const processHead = async ({ configs, head }) => {
