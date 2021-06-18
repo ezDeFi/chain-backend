@@ -3,7 +3,9 @@
 const path = require('path')
 
 class ConsumerLoader {
-    constructor() {}
+    constructor(get) {
+        this._mongodb = get('mongodb')
+    }
 
     async open() {}
 
@@ -14,7 +16,7 @@ class ConsumerLoader {
     //  * [].getRequests {Function}
     //  * [].processLogs {Function}
     get list() {
-        return this._states
+        return this._consumers
     }
 
     // Input
@@ -26,7 +28,7 @@ class ConsumerLoader {
             throw Error('Invalid states')
         }
 
-        this._states = states.map(state => {
+        this._consumers = states.map(state => {
             return typeof state === 'string'
                 ? this._loadStateFile(state)
                 : state
@@ -34,9 +36,11 @@ class ConsumerLoader {
     }
 
     _loadStateFile(relativePath) {
-        return require(
-            path.join(__dirname, '..', '..', relativePath)
-        )
+        // todo: is it base name?
+        let key = path.basename(relativePath, path.extname(relativePath))
+        let filePath = path.join(__dirname, '..', '..', relativePath)
+
+        return require(filePath)(key, this._mongodb)
     }
 }
 

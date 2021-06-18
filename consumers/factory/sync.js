@@ -1,23 +1,25 @@
-const LogsStateModel = require('../../models/LogsStateModel')
 const { filterLogs } = require('../../helpers/logs')
 
-module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
-    // reset the state
-    // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
+// Descriptions
+//  * Create a new consumer.
+//
+// Output {Object}
+//  * key {String}
+//  * getRequests {Function}
+function syncConsumerFactory({key, filter, genesis, applyLogs, rangeLimit, mongodb}) {
+    let logStateCollection = mongodb.logStateCollection
 
-    const processLogs = async ({ request, logs, fromBlock, toBlock, lastHead, head }) => {
+    async function processLogs({ request, logs, fromBlock, toBlock, lastHead, head }) {
         // TODO: handle synchronization
 
-        // filter by input request
-        logs = filterLogs(logs, request)
+        let matchedLogs = filterLogs(logs, request)
 
-        const state = await LogsStateModel.findOne({ key }).lean() || {
+        const state = await logStateCollection.findOne({key}) || {
             range: {
                 lo: lastHead+1,
                 hi: lastHead,
             }
         }
-        // console.log('processLogs', {state, logs, fromBlock, toBlock, lastHead})
         const oldState = {
             value: state.value,
             range: {...state.range},
@@ -26,6 +28,7 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
             value: oldState.value,
             range: {...oldState.range},
         }
+
         try {
             if (head) {
                 if (!newState.range.hi) {
@@ -47,7 +50,7 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
             // }
 
             // APPLY LOGS TO OLD VALUE
-            newState.value = await applyLogs(oldState.value, logs)
+            newState.value = await applyLogs(oldState.value, matchedLogs)
             newState.range.lo = Math.min(state.range.lo, fromBlock)
             newState.range.hi = Math.max(state.range.hi || lastHead, toBlock)
         } catch (err) {
@@ -66,44 +69,54 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
             }
 
             console.error(`sync:${key} update db`, newState)
-            return LogsStateModel.updateOne(
+
+            await logStateCollection.updateOne(
                 { key },
-                newState,
+                { $set: newState},
                 { upsert: true },
-            );
+            )
         }
+    }
+
+    // Output {Array<Object>}
+    //  * [].key {String}
+    //  * [].address {Array<String> || String}
+    //  * [].topics {Array[4]}
+    //  * [].from {Number}
+    //  * [].to {Number}
+    //  * [].processLogs {Function}
+    async function getRequests({maxRange, lastHead}) {
+        const { address, topics } = filter
+
+        const state = await logStateCollection.findOne({key}) || {
+            value: null,
+            range: {
+                lo: lastHead+1,
+                hi: lastHead,
+            }
+        }
+
+        const hi = state.range.hi || lastHead
+        const from = hi + 1
+        const requests = [{ key, address, topics, from, processLogs }]
+
+        // crawl back is needed only when there's no value found in fresh blocks
+        if (state.value == null) {
+            maxRange = Math.min(maxRange, rangeLimit || Number.MAX_SAFE_INTEGER)
+            const to = state.range.lo - 1
+            const from = Math.max(to - maxRange, genesis || 0)
+            if (from <= to) {
+                requests.push({ key, address, topics, from, to, processLogs })
+            }
+        }
+
+        return requests
     }
 
     return {
         key,
-
-        getRequests: async ({maxRange, lastHead}) => {
-            const { address, topics } = filter
-
-            const state = await LogsStateModel.findOne({ key }).lean() || {
-                value: null,
-                range: {
-                    lo: lastHead+1,
-                    hi: lastHead,
-                }
-            }
-
-                const hi = state.range.hi || lastHead
-                const from = hi + 1
-            const requests = [{ key, address, topics, from, processLogs }]
-
-            // crawl back is needed only when there's no value found in fresh blocks
-            if (state.value == null) {
-                maxRange = Math.min(maxRange, rangeLimit || Number.MAX_SAFE_INTEGER)
-                const to = state.range.lo - 1
-                const from = Math.max(to - maxRange, genesis || 0)
-                if (from <= to) {
-                    requests.push({ key, address, topics, from, to, processLogs })
-                }
-            }
-
-
-            return requests
-        },
+        getRequests
     }
 }
+
+module.exports = syncConsumerFactory

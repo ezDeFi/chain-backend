@@ -2,12 +2,13 @@
 
 const Bluebird = require('bluebird')
 const _ = require('lodash')
+const {mergeTopics} = require('./util')
 
 class HeadProcessor {
     constructor(get) {
         this._configCollection = get('mongodb').configCollection
         this._chunkSize = get('chunkSize')
-        this._logProvider = get('logProvider')
+        this._ethersLogProvider = get('ethersLogProvider')
         this._consumerLoader = get('consumerLoader')
     }
 
@@ -26,7 +27,9 @@ class HeadProcessor {
             lastHead = head - maxRange
             await this._configCollection.updateOne(
                 { key: 'lastHead' },
-                { value: lastHead },
+                {
+                    $set: {value: lastHead}
+                },
                 { upsert: true },
             )
         }
@@ -57,7 +60,7 @@ class HeadProcessor {
 
         const address = requests.filter(r => !!r.address).map(r => r.address)
         const topics = mergeTopics(requests.map(r => r.topics))
-        const logs = await this._logProvider.get({ address, topics, fromBlock, toBlock })
+        const logs = await this._ethersLogProvider.get({ address, topics, fromBlock, toBlock })
 
         if (!logs) {
             return false // failed
@@ -72,7 +75,9 @@ class HeadProcessor {
         })
         await this._configCollection.updateOne(
             { key: 'lastHead' },
-            { value: toBlock },
+            {
+                $set: {value: toBlock}
+            },
             { upsert: true },
         )
 

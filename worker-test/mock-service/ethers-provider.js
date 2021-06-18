@@ -3,7 +3,7 @@
 const path = require('path')
 
 class EthersProvider {
-    constructor(get) {
+    constructor(_get) {
         this._provider = {
             getLogs: this._getLogs.bind(this)
         }
@@ -14,7 +14,7 @@ class EthersProvider {
     async close() {}
 
     // {ethers.provider.JsonRpcProvider}
-    get provider() {
+    get native() {
         return this._provider
     }
 

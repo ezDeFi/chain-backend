@@ -4,8 +4,9 @@ const assert = require('assert')
 const ioc = require('@trop/ioc')
 const {
     ChunkSize,
-    LogProvider,
-    HeadProcessor
+    EthersLogProvider,
+    HeadProcessor,
+    PastProcessor
 } = require('../services')
 const {
     Mongodb,
@@ -16,9 +17,11 @@ const {
 describe('HeadProcessor', () => {
     let container
     let configCollection
+    let logStateCollection
     let consumerLoader
     let ethersProvider
     let processor
+    let pastProcessor
 
     before(async() => {
         let config = new ioc.Config({
@@ -30,13 +33,16 @@ describe('HeadProcessor', () => {
             'chunkSize': ChunkSize,
             'consumerLoader': ConsumerLoader,
             'ethersProvider': EthersProvider,
-            'logProvider': LogProvider,
-            'headProcessor': HeadProcessor
+            'ethersLogProvider': EthersLogProvider,
+            'headProcessor': HeadProcessor,
+            'pastProcessor': PastProcessor
         })
         configCollection = container.get('mongodb').configCollection
+        logStateCollection = container.get('mongodb').logStateCollection
         consumerLoader = container.get('consumerLoader')
         ethersProvider = container.get('ethersProvider')
         processor = container.get('headProcessor')
+        pastProcessor = container.get('pastProcessor')
     })
 
     after(async() => {
@@ -44,15 +50,37 @@ describe('HeadProcessor', () => {
     })
 
     it('step 1', async() => {
-        consumerLoader.mock(['consumers/sync-pc-usdt-busd'])
+        consumerLoader.mock(['consumers/pc-usdt-busd'])
         ethersProvider.mockGetLogs('step_1')
 
         let head = 0
 
         await processor.process(head)
 
-        let dbHead = await configCollection.findOne({}, { _id: 0 })
+        let config = await configCollection.findOne({}, { _id: 0 })
+        let logState = await logStateCollection.findOne({}, {_id: 0})
 
-        assert.deepStrictEqual(dbHead, { head })
+        assert.deepStrictEqual(config, {
+            key: 'lastHead',
+            value: 8283952
+        })
+        assert.deepStrictEqual(logState, {
+            key: 'pc-usdt-busd',
+            range: {
+                hi: 8283952,
+                lo: -2000
+            },
+            value: undefined
+        })
+    })
+
+    it('step 2', async() => {
+        consumerLoader.mock(['consumers/pc-usdt-busd'])
+        ethersProvider.mockGetLogs('step_1')
+        await pastProcessor.process()
+
+        let state = await logStateCollection.findOne({}, {_id: 0})
+
+        assert.deepStrictEqual(state, {})
     })
 })

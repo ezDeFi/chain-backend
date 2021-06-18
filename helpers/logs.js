@@ -1,19 +1,40 @@
+'use strict'
 
-exports.filterLogs = (logs, request) => {
-    const { address, topics, from, to } = request
-    logs = logs.filter(log => from <= log.blockNumber)
+// Input
+//  * logs {Array<Object>}
+//  * filter {Object}
+//  * filter.key {String}
+//  * filter.address {Array<String> || String}
+//  * filter.topics {Array[4]}
+//  * filter.from {Number}
+//  * filter.to {Number}
+//
+// Output {Array<Object>} List of logs that match request
+function filterLogs(logs, filter) {
+    let { address, topics, from, to } = filter
+    let result = logs.filter(log => (from <= log.blockNumber))
+
     if (to) {
-        logs = logs.filter(log => log.blockNumber <= to)
+        result = result.filter(log => (log.blockNumber <= to))
     }
+
     if (address) {
         if (Array.isArray(address)) {
-            logs = logs.filter(log => address.includes(log.address))
+            result = result.filter(log => address.includes(log.address))
         } else {
-            logs = logs.filter(log => address === log.address)
+            result = result.filter(log => (address === log.address))
         }
     }
+
     if (topics) {
-        logs = logs.filter(log => !topics.some((topic, i) => topic && log.topics[i] !== topic))
+        result = result.filter(log => {
+            return !topics.some((topic, i) => topic && log.topics[i] !== topic)
+        })
     }
-    return logs
+
+    return result
+}
+
+module.exports = {
+    filterLogs
 }

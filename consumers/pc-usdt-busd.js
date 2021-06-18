@@ -1,25 +1,36 @@
 const { ethers } = require('ethers')
 const contractABI = require('../ABIs/UniswapV2Pair.json').abi
-const sync = require('./factory/sync')
+const syncConsumerFactory = require('./factory/sync')
 
-module.exports = (key) => {
-    // reset the state
-    // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
-
-    const SFarm = new ethers.Contract("0xD1F12370b2ba1C79838337648F820a87eDF5e1e6", contractABI)
+// Description
+//  * Create a new consumer that work on pair USDT-BUSD.
+//
+// Input
+//  * key {String}
+//  * mongodb {service.Mongodb}
+//
+// Output {Object} See output of `factory.syncConsumerFactory()`
+function pcUsdtBusdConsumer(key, mongodb) {
+    const address = '0xD1F12370b2ba1C79838337648F820a87eDF5e1e6'
+    const SFarm = new ethers.Contract(address, contractABI)
     const filter = SFarm.filters.Sync(null, null)
+    const genesis = parseInt(4206097)
 
-    return sync({
+    function applyLogs(value, logs) {
+        if (logs.length) {
+            console.error(logs[logs.length-1].data)
+            return logs[logs.length-1].data
+        }
+
+        return value
+    }
+
+    return syncConsumerFactory({
         key,
         filter,
-        genesis: parseInt(4206097),
-
-        applyLogs: (value, logs) => {
-            if (logs.length) {
-                console.error(logs[logs.length-1].data)
-                return logs[logs.length-1].data
-            }
-            return value
-        }
+        mongodb,
+        applyLogs,
+        genesis,
     })
 }
+module.exports = pcUsdtBusdConsumer

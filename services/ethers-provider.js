@@ -15,7 +15,7 @@ class EthersProvider {
     async close() {}
 
     // Output {ethers.providers.JsonRpcProvider}
-    native() {
+    get native() {
         return this._provider
     }
 }

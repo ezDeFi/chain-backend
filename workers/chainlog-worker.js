@@ -1,42 +1,45 @@
-const { ethers } = require('ethers')
-const provider = new ethers.providers.JsonRpcProvider(process.env.RPC)
-const path = require("path")
-const { processHead, processPast } = require('../services/chainlog-provider')
-const mongoose = require("mongoose");
-mongoose.set("useFindAndModify", false);
+'use strict'
 
-const consumers = []
+const ioc = require('@trop/ioc')
 
+require('dotenv').config()
 
-console.log('State consumers', consumers)
+const {
+    ChunkSize,
+    ConsumerLoader,
+    EthersProvider,
+    EthersLogProvider,
+    Mongodb,
+    HeadProcessor,
+    PastProcessor,
+    ChainlogWorker
+} = require('../services')
 
-provider.getBlockNumber()
-    .then(processBlock)
-    .then(() => {
-        provider.on('block', processBlock)
-        crawl()
+async function main() {
+    let config = new ioc.Config({
+        mongodb_endpoint: process.env['MONGODB_URL'],
+        eth_rpc_endpoint: process.env['RPC']
+    })
+    let container = await ioc.new_container(config, {
+        'mongodb': Mongodb,
+        'chunkSize': ChunkSize,
+        'consumerLoader': ConsumerLoader,
+        'ethersProvider': EthersProvider,
+        'ethersLogProvider': EthersLogProvider,
+        'headProcessor': HeadProcessor,
+        'pastProcessor': PastProcessor,
+        'chainlogWorker': ChainlogWorker
     })
 
-let isCatchingUp = false;
-
-async function processBlock(head) {
-    console.log('New block', head)
-    if (isCatchingUp) {
-        return;
-    }
-    try {
-        isCatchingUp = true;
-        return processHead({ configs: consumers, head })
-    } catch (error) {
-        console.error(error.message)
-    } finally {
-        isCatchingUp = false;
-    }
+    container.get('chainlogWorker')
+        .start()
+        .catch(err => {
+            console.error(err)
+            process.exit(1)
+        })
 }
 
-function crawl() {
-    // console.error('crawling...')
-    processPast({ configs: consumers })
-        .then(nextDelay => setTimeout(crawl, nextDelay))
-        .catch((err) => setTimeout(crawl, 1000))
-}
+main().catch(err => {
+    console.error(err)
+    process.exit(1)
+})

@@ -24,6 +24,11 @@ class Mongodb {
     get configCollection() {
         return this._db.collection('configs')
     }
+
+    // mongodb.Collection
+    get logStateCollection() {
+        return this._db.collection('logsstates')
+    }
 }
 
 module.exports = Mongodb

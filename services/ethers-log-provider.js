@@ -2,7 +2,7 @@
 
 const { TARGET_LOGS_PER_CHUNK } = require('../helpers/constants').getlogs
 
-class LogProvider {
+class EthersLogProvider {
     constructor(get) {
         this._chunkSize = get('chunkSize')
         this._ethersProvider = get('ethersProvider').native
@@ -14,6 +14,7 @@ class LogProvider {
 
     async get({ address, fromBlock, toBlock, topics }, type='head') {
         try {
+            console.log('hereeeeee<<<<<<<<');
             const logs = await this._ethersProvider.getLogs({
                 address,
                 topics,
@@ -42,4 +43,4 @@ class LogProvider {
     }
 }
 
-module.exports = LogProvider
+module.exports = EthersLogProvider

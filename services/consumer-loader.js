@@ -4,7 +4,12 @@ const path = require('path')
 const fs = require('fs')
 
 class ConsumerLoader {
-    async constructor(_get) {
+    constructor(get) {
+        this._mongodb = get('mongodb')
+    }
+
+    async open() {
+        let self = this
         let dir = path.join(__dirname, '..', 'consumers')
 
         this._consumers = fs.readdirSync(dir)
@@ -14,11 +19,9 @@ class ConsumerLoader {
                 let key = file.split('.').slice(0, -1).join('.')
                 let filePath = path.join(dir, file)
 
-                return require(filePath)(key)
+                return require(filePath)(key, self._mongodb)
             })
     }
-
-    async open() {}
 
     async close() {}
 
