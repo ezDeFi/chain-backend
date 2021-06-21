@@ -67,8 +67,10 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
             }
 
             const delta = diff(oldState.value, newState.value)
-            const changes = Object.keys(delta).length
-            console.log(`sync:${key} update db`, {changes})
+            if (delta) {
+                const changes = Object.keys(delta).length
+                console.log(`sync:${key} update db`, {changes})
+            }
             return LogsStateModel.updateOne(
                 { key },
                 newState,

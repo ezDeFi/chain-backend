@@ -65,8 +65,10 @@ module.exports = ({key, filter, applyLogs}) => {
             }
 
             const delta = diff(oldState.value, newState.value)
-            const changes = Object.keys(delta).length
-            console.log(`update:${key} update db`, {changes})
+            if (delta) {
+                const changes = Object.keys(delta).length
+                console.log(`update:${key} update db`, {changes})
+            }
             return LogsStateModel.updateOne(
                 { key },
                 newState,
