@@ -54,7 +54,7 @@ const createProccesor = ({config, consumers}) => {
     
         const chunks = _splitChunks(fromBlock, toBlock, concurrency);
         const logs = await Bluebird.map(chunks, ({ from: fromBlock, to: toBlock }, i) => {
-            return _getLogsInRange({ requests, fromBlock, toBlock }, type)
+            return _getLogsInRange({ requests, fromBlock, toBlock })
         }, { concurrency }).then(_.flatten);
     
         if (!logs) {
