@@ -25,6 +25,7 @@ const provider = new JsonRpcProvider({
 const headProcessor = HeadProcessor.createProccesor({
     consumers,
     config: createConfig({
+        type: 'HEAD',
         config: {
             provider,
             size: CHUNK_SIZE_HARD_CAP,
@@ -38,6 +39,7 @@ const headProcessor = HeadProcessor.createProccesor({
 const pastProcessor = PastProcessor.createProccesor({
     consumers,
     config: createConfig({
+        type: 'PAST',
         config: {
             provider,
             size: CHUNK_SIZE_HARD_CAP,

@@ -1,5 +1,5 @@
 
-const createConfig = ({config, hardCap, target}) => {
+const createConfig = ({type, config, hardCap, target}) => {
     const getConcurrency = () => {
         return config.concurrency || 1
     }
