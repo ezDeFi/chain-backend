@@ -41,7 +41,7 @@ const createProccesor = ({config, consumers}) => {
             var hasMoreBlock = true
         }
     
-        const address = requests.filter(r => !!r.address).map(r => r.address)
+        const address = _.flatten(requests.filter(r => !!r.address).map(r => r.address))
         const topics = mergeTopics(requests.map(r => r.topics))
         const logs = await config.getLogs({ address, topics, fromBlock, toBlock })
 

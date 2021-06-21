@@ -24,7 +24,7 @@ const createProccesor = ({config, consumers}) => {
             // console.log(`no request in range ${fromBlock} +${toBlock-fromBlock}`)
             return []
         }
-        const address = inRangeRequests.filter(r => !!r.address).map(r => r.address)
+        const address = _.flatten(requests.filter(r => !!r.address).map(r => r.address))
         const topics = mergeTopics(inRangeRequests.map(r => r.topics))
         return config.getLogs({ address, fromBlock, toBlock, topics})
     }
