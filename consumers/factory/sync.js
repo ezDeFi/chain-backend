@@ -88,8 +88,8 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
                 }
             }
 
-                const hi = state.range.hi || lastHead
-                const from = hi + 1
+            const hi = state.range.hi || lastHead
+            const from = hi + 1
             const requests = [{ key, address, topics, from, processLogs }]
 
             // crawl back is needed only when there's no value found in fresh blocks
