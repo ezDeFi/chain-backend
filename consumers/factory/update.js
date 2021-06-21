@@ -1,5 +1,6 @@
 const LogsStateModel = require('../../models/LogsStateModel')
 const { filterLogs } = require('../../helpers/logs')
+const { diff } = require('jsondiffpatch')
 
 module.exports = ({key, filter, applyLogs}) => {
     // reset the state
@@ -63,7 +64,9 @@ module.exports = ({key, filter, applyLogs}) => {
                 return // no data change
             }
 
-            console.error(`update:${key} update db`, newState)
+            const delta = diff(oldState.value, newState.value)
+            const changes = Object.keys(delta).length
+            console.log(`update:${key} update db`, {changes})
             return LogsStateModel.updateOne(
                 { key },
                 newState,

@@ -1,5 +1,6 @@
 const LogsStateModel = require('../../models/LogsStateModel')
 const { filterLogs } = require('../../helpers/logs')
+const { diff } = require('jsondiffpatch')
 
 module.exports = ({key, filter, genesis, applyLogs}) => {
     // reset the state
@@ -63,7 +64,9 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
                 return // no data change
             }
 
-            console.error(`accumulating:${key} update db`, newState)
+            const delta = diff(oldState.value, newState.value)
+            const changes = Object.keys(delta).length
+            console.log(`ac:${key} update db`, {changes})
             return LogsStateModel.updateOne(
                 { key },
                 newState,
