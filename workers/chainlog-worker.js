@@ -59,14 +59,14 @@ provider.getBlockNumber()
 
 let isCatchingUp = false;
 
-function processBlock(head) {
+async function processBlock(head) {
     console.log('New block', head)
     if (isCatchingUp) {
         return;
     }
     try {
         isCatchingUp = true;
-        return headProcessor.process(head)
+        return await headProcessor.process(head)
     } catch (error) {
         console.error(error.message)
     } finally {
