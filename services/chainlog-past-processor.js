@@ -50,8 +50,8 @@ const createProccesor = ({config, consumers}) => {
         requests = requests.filter(r => r.from <= toBlock && (!r.to || r.to >= fromBlock))
     
         console.log('PAST ----', { lastHead, fromBlock, toBlock })
-        console.log(requests.map(({key, from, to}) => `\t${key}:\t${from}${to ? ` +${to-from}` : ''}`).join('\n'))
-    
+        console.log(requests.map(({key, from, to}) => `\t${key}:\t${from} +${(to||toBlock)-from}`).join('\n'))
+
         const chunks = _splitChunks(fromBlock, toBlock, concurrency);
         const logs = await Bluebird.map(chunks, ({ from: fromBlock, to: toBlock }, i) => {
             return _getLogsInRange({ requests, fromBlock, toBlock })
