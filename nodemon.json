@@ -3,5 +3,6 @@
       "restart": "kill-port 6013",
       "crash": "kill-port 6013"
     },
+    "ignore": ["test", "tools"],
     "delay": "1500"
 }
