@@ -33,3 +33,10 @@ exports.mergeTopics = (topics) => {
             return topics
         })
 }
+
+exports.mergeAddress = (requests) => {
+    if (requests.some(r => !r.address)) {
+        return undefined
+    }
+    return _.flatten(requests.filter(r => !!r.address).map(r => r.address))
+}

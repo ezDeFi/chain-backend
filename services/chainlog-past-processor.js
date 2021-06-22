@@ -1,7 +1,7 @@
 const Bluebird = require('bluebird')
 const _ = require('lodash')
 const ConfigModel = require("../models/ConfigModel")
-const { mergeTopics } = require("../helpers/logs")
+const { mergeTopics, mergeAddress } = require("../helpers/logs")
 
 const createProccesor = ({config, consumers}) => {
     const _splitChunks = (from, to, count) => {
@@ -24,7 +24,7 @@ const createProccesor = ({config, consumers}) => {
             // console.log(`no request in range ${fromBlock} +${toBlock-fromBlock}`)
             return []
         }
-        const address = _.flatten(requests.filter(r => !!r.address).map(r => r.address))
+        const address = mergeAddress(requests)
         const topics = mergeTopics(inRangeRequests.map(r => r.topics))
         return config.getLogs({ address, fromBlock, toBlock, topics})
     }
