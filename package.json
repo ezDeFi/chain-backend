@@ -7,6 +7,7 @@
     "watch": "nodemon ./bin/www",
     "sync": "rsync -urtvL --delete -e ssh --exclude=node_modules --exclude=package-lock.json --exclude=.git ./ lazarus:/root/src/sfarm-api/",
     "test": "nyc _mocha --timeout 10000 --exit --report lcovonly -- -R spec",
+    "test-worker": "mocha worker-test --exit --timeout 120000",
     "lint": "eslint --fix --config .eslintrc.json \"**/*.js\""
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "nodemailer": "^6.3.1"
   },
   "devDependencies": {
+    "@trop/gear": "^0.4.2",
     "@types/bluebird": "^3.5.35",
     "@types/cron": "^1.7.2",
     "@types/lodash": "^4.14.170",
@@ -40,6 +42,7 @@
     "eslint": "^6.5.1",
     "kill-port": "^1.6.1",
     "mocha": "^6.2.2",
+    "mongodb-memory-server": "^6.9.6",
     "nodemon": "^1.19.4",
     "nyc": "^14.1.1"
   }
