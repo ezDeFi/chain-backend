@@ -7,7 +7,7 @@ class EthersProviderMock {
     constructor() {
         // {Array<Object>} Items must be sort incresement by attribute
         // `blockNumber`.
-        this._logs = undefined
+        this._logs = []
         this._eventEmitter = new EventEmitter()
     }
 
@@ -16,10 +16,6 @@ class EthersProviderMock {
     getLogs({ address, fromBlock, toBlock, topics = undefined }) {
         if (fromBlock < 0 || toBlock < 0 || fromBlock > toBlock) {
             throw Error('Invalid block range')
-        }
-
-        if (!this._logs) {
-            throw Error('Ethers log does not specific')
         }
 
         return this._logs
@@ -76,6 +72,29 @@ class EthersProviderMock {
         else {
             throw Error('Invalid logs mocking')
         }
+    }
+
+    // Descriptions
+    //  * Append logs to current logs.
+    //  * Logs will be sorted b incresement `blockNumber`.
+    //
+    // Input
+    //  * logs {Array<Object>} List of ETH logs.
+    mockAppendLogs(logs) {
+        if (!Array.isArray(logs) || logs.length === 0) {
+            throw Error('Invalid logs to append')
+        }
+
+        let sortedLogs = this._sortLogs(logs)
+
+        if (
+            this._logs.length > 0 &&
+            sortedLogs[0].blockNumber < this._logs[this._logs.length - 1].blockNumber
+        ) {
+            throw Error('Invalid logs to append')
+        }
+
+        this._logs = [...this._logs, ...sortedLogs]
     }
 
     // Input

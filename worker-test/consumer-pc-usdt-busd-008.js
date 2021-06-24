@@ -40,7 +40,12 @@ describe('consumer/pc-usdt-busd: on blockchain network that has no matched logs'
         }
     })
 
-    it('start worker', async () => {
+    it('should be succeed', async () => {
+        await startWorker()
+        await emitNewBlockEvent()
+    })
+
+    async function startWorker() {
         let consumers = loadConsumer(['consumers/pc-usdt-busd'])
 
         ethersProvider.mockGetLogs('worker-test/log/zero-address-4000')
@@ -53,9 +58,9 @@ describe('consumer/pc-usdt-busd: on blockchain network that has no matched logs'
         let state = await LogsStateModel.findOne({key}).lean()
 
         assert.strictEqual(state.value, null)
-    })
+    }
 
-    it('emit new block event', async () => {
+    async function emitNewBlockEvent() {
         let pairAddress = '0x0000000000000000000000000000000000000000'
         let topics = [
             '0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1'
@@ -70,5 +75,5 @@ describe('consumer/pc-usdt-busd: on blockchain network that has no matched logs'
         let state = await LogsStateModel.findOne({key}).lean()
 
         assert.strictEqual(state.value, null)
-    })
+    }
 })

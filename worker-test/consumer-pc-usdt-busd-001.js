@@ -22,11 +22,15 @@ const {
 const LogsStateModel = require('../models/LogsStateModel')
 
 describe('consumer/pc-usdt-busd: succeed with few blocks', () => {
-    let worker = undefined
+    let worker
+    let consumers
+    let ethersProvider
     let key = 'pc-usdt-busd'
 
     before(async () => {
         await mongooseMock.open()
+        consumers = loadConsumer(['consumers/pc-usdt-busd'])
+        ethersProvider = new EthersProviderMock()
     })
 
     after(async () => {
@@ -38,9 +42,6 @@ describe('consumer/pc-usdt-busd: succeed with few blocks', () => {
     })
 
     it('should be succeed', async() => {
-        let consumers = loadConsumer(['consumers/pc-usdt-busd'])
-        let ethersProvider = new EthersProviderMock()
-
         ethersProvider.mockGetLogs('worker-test/log/pc-usdt-busd-100')
         worker = await chainlogWorkerFactory({
             consumers,

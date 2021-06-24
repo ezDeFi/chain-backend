@@ -49,7 +49,12 @@ describe('consumer/pc-usdt-busd: on future blockchain network', () => {
         }
     })
 
-    it('start worker', async () => {
+    it('should be succeed', async () => {
+        await startWorker()
+        await emitNewBlockEvent()
+    })
+
+    async function startWorker() {
         let consumers = loadConsumer(['consumers/pc-usdt-busd'])
 
         ethersProvider.mockGetLogs('worker-test/log/pc-usdt-busd-5100')
@@ -62,9 +67,9 @@ describe('consumer/pc-usdt-busd: on future blockchain network', () => {
         let state = await LogsStateModel.findOne({key}).lean()
 
         assert.strictEqual(state.value, '5100')
-    })
+    }
 
-    it('emit new block event which is far from state', async () => {
+    async function emitNewBlockEvent() {
         let pairAddress = '0xD1F12370b2ba1C79838337648F820a87eDF5e1e6'
         let topics = [
             '0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1'
@@ -79,5 +84,5 @@ describe('consumer/pc-usdt-busd: on future blockchain network', () => {
         let state = await LogsStateModel.findOne({key}).lean()
 
         assert.strictEqual(state.value, '5101')
-    })
+    }
 })
