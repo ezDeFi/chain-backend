@@ -35,7 +35,7 @@ describe('consumer/pc-usdt-busd: custom head and past processing', () => {
 
         await mongooseMock.open()
         ethersProvider = new EthersProviderMock()
-        ethersProvider.mockGetLogs('worker-test/log/pc-usdt-busd-5000')
+        ethersProvider.mockGetLogs('worker-test/log/pc-usdt-busd-4000')
         pastProcessor = chainlogPastProcessor.createProccesor({
             consumers,
             config: createConfig({
@@ -79,19 +79,18 @@ describe('consumer/pc-usdt-busd: custom head and past processing', () => {
 
         await headProcessor.process(newBlockNumber)
 
-        let state = await LogsStateModel.findOne({key}).lean()
+        let {value} = await LogsStateModel.findOne({key}).lean()
 
-        assert.strictEqual(state.value, newBlockNumber.toString())
+        assert.strictEqual(value, null)
     }
 
     async function processPastLogLoop() {
-        for (let n = 5; n >= 0; --n) {
+        for (let n = 0; n < 5; ++n) {
             await pastProcessor.process()
-
-            let {value} = await LogsStateModel.findOne({key}).lean()
-            let expectValue = (n*chunkSize).toString()
-
-            assert.strictEqual(value, expectValue)
         }
+
+        let {value} = await LogsStateModel.findOne({key}).lean()
+
+        assert.strictEqual(value, '4000')
     }
 })
