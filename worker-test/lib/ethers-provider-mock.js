@@ -32,11 +32,7 @@ class EthersProviderMock {
 
     // Output {Number} Block number from last log entry
     async getBlockNumber() {
-        if (!Array.isArray(this._logs) || this._logs.length <= 0) {
-            throw Error('Ethers log does not specific')
-        }
-
-        return this._logs[this._logs.length - 1].blockNumber
+        return this._lastBlockNumber
     }
 
     on(eventName, handler) {
@@ -61,6 +57,7 @@ class EthersProviderMock {
     mockGetLogs(logs) {
         if (Array.isArray(logs)) {
             this._logs = this._sortLogs(logs)
+            this._lastBlockNumber = this._getLastBlockNumber()
         }
         else if (typeof logs === 'string') {
             let rawLogs = require(
@@ -68,6 +65,7 @@ class EthersProviderMock {
             )
 
             this._logs = this._sortLogs(rawLogs)
+            this._lastBlockNumber = this._getLastBlockNumber()
         }
         else {
             throw Error('Invalid logs mocking')
@@ -95,6 +93,7 @@ class EthersProviderMock {
         }
 
         this._logs = [...this._logs, ...sortedLogs]
+        this._lastBlockNumber = this._getLastBlockNumber()
     }
 
     // Input
@@ -115,10 +114,22 @@ class EthersProviderMock {
         this._eventEmitter.emit('block', blockNumber)
     }
 
+    mockGetBlockNumber(lastBlockNumber) {
+        this._lastBlockNumber = lastBlockNumber
+    }
+
     _sortLogs(logs) {
         return logs.sort(function byBlockNumber(a, b) {
             return a.blockNumber <= b.blockNumber ? - 1: 1
         })
+    }
+
+    _getLastBlockNumber() {
+        if (!Array.isArray(this._logs) || this._logs.length <= 0) {
+            throw Error('Ethers log does not specific')
+        }
+
+        return this._logs[this._logs.length - 1].blockNumber
     }
 }
 

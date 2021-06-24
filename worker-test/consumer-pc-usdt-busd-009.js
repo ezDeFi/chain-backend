@@ -14,6 +14,7 @@
 
 const assert = require('assert')
 const LogsStateModel = require('../models/LogsStateModel')
+const ConfigModel = require('../models/ConfigModel')
 const chainlogHeadProcessor = require('../services/chainlog-head-processor')
 const chainlogPastProcessor = require('../services/chainlog-past-processor')
 const {createConfig} = require('../services/chainlog-config')
@@ -29,6 +30,7 @@ describe('consumer/pc-usdt-busd: custom head and past processing', () => {
     let ethersProvider
     let key = 'pc-usdt-busd'
     let chunkSize = 1000
+    let lastBlockNumber = 5000
 
     before(async () => {
         let consumers = loadConsumer(['consumers/pc-usdt-busd'])
@@ -36,6 +38,7 @@ describe('consumer/pc-usdt-busd: custom head and past processing', () => {
         await mongooseMock.open()
         ethersProvider = new EthersProviderMock()
         ethersProvider.mockGetLogs('worker-test/log/pc-usdt-busd-4000')
+        ethersProvider.mockGetBlockNumber(lastBlockNumber)
         pastProcessor = chainlogPastProcessor.createProccesor({
             consumers,
             config: createConfig({
@@ -75,13 +78,12 @@ describe('consumer/pc-usdt-busd: custom head and past processing', () => {
     })
 
     async function processHeadBlock() {
-        let newBlockNumber = 5000
+        await headProcessor.process(lastBlockNumber)
 
-        await headProcessor.process(newBlockNumber)
+        let state = await LogsStateModel.findOne({key}).lean()
+        let config = await ConfigModel.findOne({key: 'lastHead'}).lean()
 
-        let {value} = await LogsStateModel.findOne({key}).lean()
-
-        assert.strictEqual(value, null)
+        assert.strictEqual(state.value, null)
     }
 
     async function processPastLogLoop() {
@@ -89,8 +91,9 @@ describe('consumer/pc-usdt-busd: custom head and past processing', () => {
             await pastProcessor.process()
         }
 
-        let {value} = await LogsStateModel.findOne({key}).lean()
+        let state = await LogsStateModel.findOne({key}).lean()
+        let config = await ConfigModel.findOne({key: 'lastHead'}).lean()
 
-        assert.strictEqual(value, '4000')
+        assert.strictEqual(state.value, '4000')
     }
 })
