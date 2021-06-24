@@ -1,14 +1,15 @@
 // Descriptions
-//  * Validate processing flow: process head log, loop of process past log
-//    works properly.
+//  * Validate that loop of past processor find out lastest sync event.
 //
 // Pre-conditions
 //  * Database has no state.
-//  * Blockchain network already has 5000 logs.
+//  * Blockchain network has latest block at 5000.
+//  * Blockchain network has sync event at block 4000 and there are no sync
+//    event from block 4001 to 5000.
 //
 // Actions
-//  * Perform head log processing.
-//  * Perform loop of past log processing.
+//  * Perform head processing at block 5000.
+//  * Perform loop of past processing.
 
 'use strict'
 
@@ -24,7 +25,7 @@ const {
     loadConsumer,
 } = require('./lib')
 
-describe('consumer/pc-usdt-busd: custom head and past processing', () => {
+describe('consumer/pc-usdt-busd: loop of past processor find out lastest sync log', () => {
     let pastProcessor
     let headProcessor
     let ethersProvider
@@ -74,7 +75,7 @@ describe('consumer/pc-usdt-busd: custom head and past processing', () => {
 
     it('should be succeed', async () => {
         await processHeadBlock()
-        await processPastLogLoop()
+        await processPastLoop()
     })
 
     async function processHeadBlock() {
@@ -86,7 +87,7 @@ describe('consumer/pc-usdt-busd: custom head and past processing', () => {
         assert.strictEqual(state.value, null)
     }
 
-    async function processPastLogLoop() {
+    async function processPastLoop() {
         for (let n = 0; n < 5; ++n) {
             await pastProcessor.process()
         }

@@ -22,7 +22,7 @@ const {
 } = require('./lib')
 const LogsStateModel = require('../models/LogsStateModel')
 
-describe('consumer/pc-usdt-busd: on many new block events', () => {
+describe('consumer/pc-usdt-busd: handle many new block events', () => {
     let worker
     let ethersProvider
     let key = 'pc-usdt-busd'
