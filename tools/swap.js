@@ -135,23 +135,22 @@ function bnDiv(a, b) {
 
 async function swap({ inputToken, outputToken, amountIn }) {
     try {
-        let _swaps = {}
-        for (const swap in FACTORY) {
-            _swaps[swap] = LogsStateModel.findOne(({ key: `${swap}-PairCreated`})).lean().then(m => m && m.value)
-        }
-        const [ swaps, reserves ] = await Bluebird.all([
-            Bluebird.props(_swaps),
-            LogsStateModel.findOne(({ key: `pair-Sync`})).lean().then(m => m && m.value)
-        ])
+        const reserves = await LogsStateModel.findOne(({ key: `pair-Sync`})).lean().then(m => m && m.value)
 
-        function findPair(swap, inputToken, outputToken) {
-            for (var pair in swaps[swap]) {
-                const { token0, token1 } = swaps[swap][pair]
-                if (token0 == inputToken && token1 == outputToken) {
-                    return { pair }
-                } else if (token1 == inputToken && token0 == outputToken) {
-                    return { pair, backward: true }
-                }
+        const cachePairs = {}
+        async function findPair(swap, inputToken, outputToken) {
+            const keyF = `${swap}-PairCreated-${inputToken}-${outputToken}`
+            if (cachePairs[keyF]) {
+                return { pair: cachePairs[keyF] }
+            }
+            const keyB = `${swap}-PairCreated-${outputToken}-${inputToken}`
+            if (cachePairs[keyB]) {
+                return { pair: cachePairs[keyB], backward: true }
+            }
+            const object = await ConfigModel.findOne(({ key: { $in: [ keyF, keyB ] } })).lean()
+            if (object) {
+                cachePairs[object.key] = object.value
+                return { pair: object.value, backward: object.key == keyB }
             }
             return {}
         }
@@ -165,11 +164,11 @@ async function swap({ inputToken, outputToken, amountIn }) {
             return backward ? [ r1, r0 ] : [ r0, r1 ]
         }
 
-        function getAmountOut(swap, inputToken, outputToken, amountIn) {
+        async function getAmountOut(swap, inputToken, outputToken, amountIn) {
             if (!ROUTERS.hasOwnProperty(swap)) {
                 return 0
             }
-            const { pair, backward } = findPair(swap, inputToken, outputToken)
+            const { pair, backward } = await findPair(swap, inputToken, outputToken)
             const [ rin, rout ] = getReserves(pair, backward)
             if (!rin || !rout) {
                 return 0
@@ -182,12 +181,12 @@ async function swap({ inputToken, outputToken, amountIn }) {
             return amountOut
         }
 
-        function getRouteAmountOut(swap, path, amount) {
+        async function getRouteAmountOut(swap, path, amount) {
             for (let i = 1; i < path.length; ++i) {
                 if (!amount || amount.isZero()) {
                     return
                 }
-                amount = getAmountOut(swap, path[i-1], path[i], amount)
+                amount = await getAmountOut(swap, path[i-1], path[i], amount)
             }
             return amount
         }
@@ -213,8 +212,8 @@ async function swap({ inputToken, outputToken, amountIn }) {
             { swap: 'ape', mid: TOKENS.BUSD },
         ]
 
-        function getRouteAmountOuts(inputToken, outputToken, amountIn) {
-            return DEXES.map(({swap, mid}) => {
+        async function getRouteAmountOuts(inputToken, outputToken, amountIn) {
+            return Bluebird.map(DEXES, async ({swap, mid}) => {
                 if (mid) {
                     return
                 }
@@ -225,7 +224,7 @@ async function swap({ inputToken, outputToken, amountIn }) {
                     }
                     path = [inputToken, mid, outputToken]
                 }
-                const amountOut = getRouteAmountOut(swap, path, amountIn)
+                const amountOut = await getRouteAmountOut(swap, path, amountIn)
                 if (!amountOut || amountOut.isZero()) {
                     return
                 }
@@ -233,8 +232,8 @@ async function swap({ inputToken, outputToken, amountIn }) {
             })
         }
 
-        function getBestDistribution(inputToken, outputToken, amountIn, chunks) {
-            const outs = getRouteAmountOuts(inputToken, outputToken, amountIn.div(chunks))
+        async function getBestDistribution(inputToken, outputToken, amountIn, chunks) {
+            const outs = await getRouteAmountOuts(inputToken, outputToken, amountIn.div(chunks))
             // console.error(outs.map(out => out && out.amountOut.toString()))
 
             chunks = chunks || 1
@@ -303,7 +302,7 @@ async function swap({ inputToken, outputToken, amountIn }) {
             let amountOut = bn.from(amountIn)
             let distribution = new Array(DEXES.length).fill('')
             for (let i = 1; i < tokens.length; ++i) {
-                [ amountOut, dist ] = getBestDistribution(tokens[i-1], tokens[i], amountOut, 1)
+                [ amountOut, dist ] = await getBestDistribution(tokens[i-1], tokens[i], amountOut, 1)
                 for (let j = 0; j < distribution.length; ++j) {
                     distribution[j] = dist[j] + distribution[j]
                 }
