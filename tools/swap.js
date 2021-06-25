@@ -10,9 +10,11 @@ mongoose.set("useFindAndModify", false);
 mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => {
         swap({
-            inputToken: TOKENS.USDT,
-            outputToken: TOKENS.BTCB,
-            amountIn: '100'+'0'.repeat(18),
+            inputToken: TOKENS.BUSD,
+            outputToken: TOKENS.CAKE,
+            amountIn: '10'+'0'.repeat(18),
+            trader: '0xC06F7cF8C9e8a8D39b0dF5A105d66127912Bc980',
+            maxMids: 3,
         })
             .then(() => process.exit(0))
             .catch(err => {
@@ -132,7 +134,7 @@ function bnDiv(a, b) {
     }
 }
 
-async function swap({ inputToken, outputToken, amountIn }) {
+async function swap({ inputToken, outputToken, amountIn, trader, maxMids }) {
     try {
         const cachePairs = {}
         async function findPair(swap, inputToken, outputToken) {
@@ -271,92 +273,92 @@ async function swap({ inputToken, outputToken, amountIn }) {
         }
 
         const MIDS = Object.values(TOKENS)
-        const MULTI_MIDS = [ [], ...MIDS.map(m => [m]) ]
+        const MULTI_MIDS = [ [[]], Object.values(TOKENS), [], [] ]
         for (let i = 0; i < MIDS.length; ++i) {
             for (let j = 0; j < MIDS.length; ++j) {
                 if (i != j) {
-                    MULTI_MIDS.push([MIDS[i], MIDS[j]])
+                    MULTI_MIDS[2].push([MIDS[i], MIDS[j]])
+                    for (let k = 0; k < MIDS.length; ++k) {
+                        if (k != i && k != j) {
+                            MULTI_MIDS[3].push([MIDS[i], MIDS[j], MIDS[k]])
+                        }
+                    }
                 }
             }
         }
-        // for (let i = 0; i < MIDS.length; ++i) {
-        //     for (let j = 0; j < MIDS.length; ++j) {
-        //         if (i == j) continue
-        //         for (let k = 0; k < MIDS.length; ++k) {
-        //             if (k != i && k != j) {
-        //                 MULTI_MIDS.push([MIDS[i], MIDS[j], MIDS[k]])
-        //             }
-        //         }
-        //     }
-        // }
-        // console.error({MULTI_MIDS})
 
-        const best = {
-            amountOut: 0,
-            distribution: [],
-            tokens: [],
+        for (let nom = 0; nom <= (maxMids||3); ++nom) {
+            await findBest(nom)
         }
 
-        for (const mids of MULTI_MIDS) {
-            const tokens = _.flatten([inputToken, mids, outputToken])
-                .filter((t, i, tokens) => t != tokens[i-1] != t)    // remove adjenced duplicates
-
-            let amountOut = bn.from(amountIn)
-            let distribution = new Array(DEXES.length).fill('')
-            for (let i = 1; i < tokens.length; ++i) {
-                [ amountOut, dist ] = await getBestDistribution(tokens[i-1], tokens[i], amountOut, 1)
-                for (let j = 0; j < distribution.length; ++j) {
-                    distribution[j] = dist[j] + distribution[j]
+        async function findBest(nom) {
+            const best = {
+                amountOut: 0,
+                distribution: [],
+                tokens: [],
+            }
+    
+            for (const mids of MULTI_MIDS[nom]) {
+                const tokens = _.flatten([inputToken, mids, outputToken])
+                    .filter((t, i, tokens) => t != tokens[i-1] != t)    // remove adjenced duplicates
+    
+                let amountOut = bn.from(amountIn)
+                let distribution = new Array(DEXES.length).fill('')
+                for (let i = 1; i < tokens.length; ++i) {
+                    [ amountOut, dist ] = await getBestDistribution(tokens[i-1], tokens[i], amountOut, 1)
+                    for (let j = 0; j < distribution.length; ++j) {
+                        distribution[j] = dist[j] + distribution[j]
+                    }
+                }
+                // console.error({amountOut, distribution, tokens})
+                if (amountOut.gt(best.amountOut)) {
+                    // console.error(amountOut.toString())
+                    best.amountOut = amountOut
+                    best.distribution = distribution.map(d => '0x'+d)
+                    best.tokens = tokens
                 }
             }
-            // console.error({amountOut, distribution, tokens})
-            if (amountOut.gt(best.amountOut)) {
-                // console.error(amountOut.toString())
-                best.amountOut = amountOut
-                best.distribution = distribution.map(d => '0x'+d)
-                best.tokens = tokens
+    
+            const flag = 0x0 // 0x40000
+            const flags = new Array(best.tokens.length).fill(flag)
+    
+            console.error({...best, amountOut: best.amountOut.toString(), flags})
+    
+            const { data } = await CONTRACTS.swapX.populateTransaction.swapMulti(
+                best.tokens,
+                amountIn,
+                0,
+                best.distribution,
+                flags,
+                trader,
+            )
+    
+            const params = [
+                inputToken,
+                outputToken,
+                trader,
+                amountIn,
+                1,
+                trader,
+                data,
+                {
+                    gasLimit: 1234567,
+                    from: trader,
+                }
+            ]
+    
+            try {
+                console.error('NOM', nom)
+                const returnAmount = await CONTRACTS.swapXProxy.callStatic.swap(...params)
+                console.error('returnAmount', returnAmount.toString())
+                const accuracy = returnAmount.mul(10000).div(best.amountOut).toNumber() / 100
+                console.error(`accuracy ${accuracy}%`)
+                const gas = await CONTRACTS.swapXProxy.estimateGas.swap(...params)
+                console.error('estimatedGas', gas.toString())
+            } catch (err) {
+                console.error('Error', err.reason || err)
+                // await getRouteAmountOuts(inputToken, outputToken, amountIn, true)
             }
-        }
-
-        const flag = 0x0 // 0x40000
-        const flags = new Array(best.tokens.length).fill(flag)
-        const trader = '0xC06F7cF8C9e8a8D39b0dF5A105d66127912Bc980'
-
-        console.error({...best, amountOut: best.amountOut.toString(), flags})
-
-        const { data } = await CONTRACTS.swapX.populateTransaction.swapMulti(
-            best.tokens,
-            amountIn,
-            0,
-            best.distribution,
-            flags,
-            trader,
-        )
-
-        const params = [
-            inputToken,
-            outputToken,
-            trader,
-            amountIn,
-            1,
-            trader,
-            data,
-            {
-                gasLimit: 1234000,
-                from: trader,
-            }
-        ]
-
-        try {
-            const returnAmount = await CONTRACTS.swapXProxy.callStatic.swap(...params)
-            console.error('returnAmount', returnAmount.toString())
-            const accuracy = returnAmount.mul(10000).div(best.amountOut).toNumber() / 100
-            console.error(`accuracy ${accuracy}%`)
-            const gas = await CONTRACTS.swapXProxy.estimateGas.swap(...params)
-            console.error('estimatedGas', gas.toString())
-        } catch (err) {
-            console.error('Error', err.reason || err)
-            // await getRouteAmountOuts(inputToken, outputToken, amountIn, true)
         }
     } catch (err) {
         console.error(err)
