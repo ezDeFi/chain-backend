@@ -1,8 +1,10 @@
-var express = require("express");
-var stateRouter = require("./state");
+const express = require("express");
+const stateRouter = require("./state");
+const swapRouter = require("./swap");
 
-var app = express();
+const app = express();
 
 app.use("/state/", stateRouter);
+app.use("/swap/", swapRouter);
 
 module.exports = app;
