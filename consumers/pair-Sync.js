@@ -2,6 +2,8 @@ const { ethers } = require('ethers')
 const contractABI = require('../ABIs/UniswapV2Pair.json').abi
 const update = require('./factory/update')
 const { ZERO_ADDRESS } = require('../helpers/constants').hexes
+const ConfigModel = require('../models/ConfigModel')
+const Bluebird = require('bluebird')
 
 module.exports = (key) => {
     // reset the state
@@ -15,19 +17,24 @@ module.exports = (key) => {
         key,
         filter,
 
-        applyLogs: (value, logs) => {
+        applyLogs: async (value, logs) => {
             if (!logs.length) {
                 return value
             }
-            value = {...value}
+
+            const changes = {}
+
             logs.forEach(log => {
                 const { address, data } = log
                 const x = data.substr(2, 64).replace(/^0+/, '');
                 const y = data.substr(66).replace(/^0+/, '');
                 const v = `${x}/${y}`
-                value[address] = v
+                changes[`${key}-${address}`] = v
             })
-            return value
+
+            await Bluebird.map(Object.entries(changes), ([key, value]) => ConfigModel.updateOne( { key }, { value }, { upsert: true } ))
+
+            return value || true
         }
     })
 }
