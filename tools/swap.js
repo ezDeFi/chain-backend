@@ -135,8 +135,6 @@ function bnDiv(a, b) {
 
 async function swap({ inputToken, outputToken, amountIn }) {
     try {
-        const reserves = await LogsStateModel.findOne(({ key: `pair-Sync`})).lean().then(m => m && m.value)
-
         const cachePairs = {}
         async function findPair(swap, inputToken, outputToken) {
             const keyF = `${swap}-PairCreated-${inputToken}-${outputToken}`
@@ -155,12 +153,20 @@ async function swap({ inputToken, outputToken, amountIn }) {
             return {}
         }
 
-        function getReserves(pair, backward) {
-            const reserve = reserves[pair]
+        const cacheReserves = {}
+        async function getReserves(address, backward) {
+            if (cacheReserves[address]) {
+                const [ r0, r1 ] = cacheReserves[address]
+                return backward ? [ r1, r0 ] : [ r0, r1 ]
+            }
+            const key = `pair-Sync-${address}`
+            const reserve = await ConfigModel.findOne(({ key })).lean().then(m => m && m.value)
             if (!reserve) {
+                cacheReserves[address] = []
                 return []
             }
             const [ r0, r1 ] = reserve.split('/').map(r => bn.from('0x'+r))
+            cacheReserves[address] = [ r0, r1 ]
             return backward ? [ r1, r0 ] : [ r0, r1 ]
         }
 
@@ -169,7 +175,7 @@ async function swap({ inputToken, outputToken, amountIn }) {
                 return 0
             }
             const { pair, backward } = await findPair(swap, inputToken, outputToken)
-            const [ rin, rout ] = getReserves(pair, backward)
+            const [ rin, rout ] = await getReserves(pair, backward)
             if (!rin || !rout) {
                 return 0
             }
@@ -214,9 +220,6 @@ async function swap({ inputToken, outputToken, amountIn }) {
 
         async function getRouteAmountOuts(inputToken, outputToken, amountIn) {
             return Bluebird.map(DEXES, async ({swap, mid}) => {
-                if (mid) {
-                    return
-                }
                 let path = [inputToken, outputToken]
                 if (mid) {
                     if (path.includes(mid)) {
@@ -348,6 +351,8 @@ async function swap({ inputToken, outputToken, amountIn }) {
         try {
             const returnAmount = await CONTRACTS.swapXProxy.callStatic.swap(...params)
             console.error('returnAmount', returnAmount.toString())
+            const accuracy = returnAmount.mul(10000).div(best.amountOut).toNumber() / 100
+            console.error(`accuracy ${accuracy}%`)
             const gas = await CONTRACTS.swapXProxy.estimateGas.swap(...params)
             console.error('estimatedGas', gas.toString())
         } catch (err) {
