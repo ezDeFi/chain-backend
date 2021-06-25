@@ -81,11 +81,11 @@ function getRouterContract(swap) {
     return CONTRACTS[swap] = new ethers.Contract(ROUTERS[swap], require('../ABIs/UniswapV2Router01.json').abi, provider)
 }
 
-async function _getAmountOut(swap, amountIn, reserveIn, reserveOut) {
+function _getAmountOut(swap, amountIn, reserveIn, reserveOut) {
     if (!amountIn || amountIn.isZero()) {
         return 0
     }
-    const fee10000 = await getFee10000(swap)
+    const fee10000 = FEE10000[swap]
     const amountInWithFee = bn.from(10000).sub(fee10000).mul(amountIn)
     const numerator = amountInWithFee.mul(reserveOut)
     const denominator = bn.from(reserveIn).mul(10000).add(amountInWithFee)
@@ -100,7 +100,7 @@ async function _getAmountOut(swap, amountIn, reserveIn, reserveOut) {
     return amountOut
 }
 
-const FEE10000 = {}
+const FEE10000 = { pancake2: 25, pancake: 20, bakery: 30, ape: 20, jul: 30 }
 
 async function getFee10000(swap) {
     if (FEE10000[swap]) {
@@ -165,7 +165,7 @@ async function swap({ inputToken, outputToken, amountIn }) {
             return backward ? [ r1, r0 ] : [ r0, r1 ]
         }
 
-        async function getAmountOut(swap, inputToken, outputToken, amountIn) {
+        function getAmountOut(swap, inputToken, outputToken, amountIn) {
             if (!ROUTERS.hasOwnProperty(swap)) {
                 return 0
             }
@@ -174,7 +174,7 @@ async function swap({ inputToken, outputToken, amountIn }) {
             if (!rin || !rout) {
                 return 0
             }
-            const amountOut = await _getAmountOut(swap, amountIn, rin, rout)
+            const amountOut = _getAmountOut(swap, amountIn, rin, rout)
             const slippage = amountOut.mul(rin).mul(100).div(amountIn).div(rout)
             if (slippage < 80) {
                 return 0    // SLIPPAGE
@@ -182,12 +182,12 @@ async function swap({ inputToken, outputToken, amountIn }) {
             return amountOut
         }
 
-        async function getRouteAmountOut(swap, path, amount) {
+        function getRouteAmountOut(swap, path, amount) {
             for (let i = 1; i < path.length; ++i) {
                 if (!amount || amount.isZero()) {
                     return
                 }
-                amount = await getAmountOut(swap, path[i-1], path[i], amount)
+                amount = getAmountOut(swap, path[i-1], path[i], amount)
             }
             return amount
         }
@@ -213,8 +213,8 @@ async function swap({ inputToken, outputToken, amountIn }) {
             { swap: 'ape', mid: TOKENS.BUSD },
         ]
 
-        async function getRouteAmountOuts(inputToken, outputToken, amountIn) {
-            return Bluebird.map(DEXES, async ({swap, mid}) => {
+        function getRouteAmountOuts(inputToken, outputToken, amountIn) {
+            return DEXES.map(({swap, mid}) => {
                 if (mid) {
                     return
                 }
@@ -225,7 +225,7 @@ async function swap({ inputToken, outputToken, amountIn }) {
                     }
                     path = [inputToken, mid, outputToken]
                 }
-                const amountOut = await getRouteAmountOut(swap, path, amountIn)
+                const amountOut = getRouteAmountOut(swap, path, amountIn)
                 if (!amountOut || amountOut.isZero()) {
                     return
                 }
@@ -233,8 +233,8 @@ async function swap({ inputToken, outputToken, amountIn }) {
             })
         }
 
-        async function getBestDistribution(inputToken, outputToken, amountIn, chunks) {
-            const outs = await getRouteAmountOuts(inputToken, outputToken, amountIn.div(chunks))
+        function getBestDistribution(inputToken, outputToken, amountIn, chunks) {
+            const outs = getRouteAmountOuts(inputToken, outputToken, amountIn.div(chunks))
             // console.error(outs.map(out => out && out.amountOut.toString()))
 
             chunks = chunks || 1
@@ -303,7 +303,7 @@ async function swap({ inputToken, outputToken, amountIn }) {
             let amountOut = bn.from(amountIn)
             let distribution = new Array(DEXES.length).fill('')
             for (let i = 1; i < tokens.length; ++i) {
-                [ amountOut, dist ] = await getBestDistribution(tokens[i-1], tokens[i], amountOut, 1)
+                [ amountOut, dist ] = getBestDistribution(tokens[i-1], tokens[i], amountOut, 1)
                 for (let j = 0; j < distribution.length; ++j) {
                     distribution[j] = dist[j] + distribution[j]
                 }
