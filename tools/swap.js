@@ -16,6 +16,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
             outputToken: TOKENS.CAKE,
             amountIn: '100'+'0'.repeat(18),
             trader: '0xC06F7cF8C9e8a8D39b0dF5A105d66127912Bc980',
+            maxMids: 1,
         })
             .then(() => process.exit(0))
             .catch(err => {
@@ -65,26 +66,30 @@ for (let i = 0; i < MIDS.length; ++i) {
     }
 }
 
+const CHUNK_TOTAL = 18*12
+
 const DEXES = [
-    { swap: 'pancake' },
-    { swap: 'pancake', mid: TOKENS.WBNB },
-    { swap: 'pancake', mid: TOKENS.CAKE },
-    { swap: 'pancake', mid: TOKENS.BUSD },
-    { swap: 'pancake', mid: TOKENS.USDT },
-    { swap: 'bakery' },
-    { swap: 'bakery', mid: TOKENS.WBNB },
-    { swap: 'bakery', mid: TOKENS.BUSD },
-    { swap: 'pancake2' },
-    { swap: 'pancake2', mid: TOKENS.WBNB },
-    { swap: 'pancake2', mid: TOKENS.CAKE },
-    { swap: 'pancake2', mid: TOKENS.BUSD },
-    { swap: 'pancake2', mid: TOKENS.USDT },
-    { swap: 'jul' },
-    { swap: 'jul', mid: TOKENS.WBNB },
-    { swap: 'ape' },
-    { swap: 'ape', mid: TOKENS.WBNB },
-    { swap: 'ape', mid: TOKENS.BUSD },
+    { swap: 'pancake' },                        // 0
+    { swap: 'pancake', mid: TOKENS.WBNB },      // 1
+    { swap: 'pancake', mid: TOKENS.CAKE },      // 2
+    { swap: 'pancake', mid: TOKENS.BUSD },      // 3
+    { swap: 'pancake', mid: TOKENS.USDT },      // 4
+    { swap: 'bakery' },                         // 5
+    { swap: 'bakery', mid: TOKENS.WBNB },       // 6
+    { swap: 'bakery', mid: TOKENS.BUSD },       // 7
+    { swap: 'pancake2' },                       // 8
+    { swap: 'pancake2', mid: TOKENS.WBNB },     // 9
+    { swap: 'pancake2', mid: TOKENS.CAKE },     // 10
+    { swap: 'pancake2', mid: TOKENS.BUSD },     // 11
+    { swap: 'pancake2', mid: TOKENS.USDT },     // 12
+    { swap: 'jul' },                            // 13
+    { swap: 'jul', mid: TOKENS.WBNB },          // 14
+    { swap: 'ape' },                            // 15
+    { swap: 'ape', mid: TOKENS.WBNB },          // 16
+    { swap: 'ape', mid: TOKENS.BUSD },          // 17
 ]
+
+const DEXES_PRIORITY = [ 0, 5, 8, 1, 6, 9, 2, 10, 3, 7, 11, 4, 12, 13, 15, 14, 16, 17 ]
 
 const CONTRACTS = {
     swapXView: new ethers.Contract('0x99Ab3d8DC4F2130F4E542506A0E9e87bA9ed7d7b', require('../ABIs/SwapXView.abi.json'), provider),
@@ -96,9 +101,12 @@ const ROUTERS = {
     pancake: '0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F',
     bakery: '0xCDe540d7eAFE93aC5fE6233Bee57E1270D3E330F',
     pancake2: '0x10ED43C718714eb63d5aA57B78B54704E256024E',
-    jul: '0xbd67d157502A23309Db761c41965600c2Ec788b2',
-    ape: '0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7',
+    // jul: '0xbd67d157502A23309Db761c41965600c2Ec788b2',
+    // ape: '0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7',
 }
+
+const sum = (chunks) => chunks.reduce((sum, a) => sum + a, 0)
+const count = (chunks) => chunks.reduce((count, chunk) => count + chunk ? 1 : 0, 0)
 
 function tokenName(address) {
     const mid = Object.entries(TOKENS).find(([, a]) => a == address)
@@ -285,8 +293,13 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
         return amount
     }
 
-    async function getRouteAmountOuts(inputToken, outputToken, amountIn) {
-        return Bluebird.map(DEXES, async ({swap, mid}) => {
+    function getRouteAmountOuts(inputToken, outputToken, amount, chunks) {
+        return Bluebird.map(DEXES, async ({swap, mid}, i, n) => {
+            if (!chunks[i]) return
+            const amountIn = amount.mul(chunks[i]).div(CHUNK_TOTAL)
+            if (!amountIn || amountIn.isZero()) {
+                return
+            }
             let path = [inputToken, outputToken]
             if (mid) {
                 if (path.includes(mid)) {
@@ -305,37 +318,110 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
     const midFee = await getGasAsToken(outputToken, gasPrice.mul(hopsGas(1)))
     console.error({midFee: midFee.toString()})
 
-    async function getBestDistribution(inputToken, outputToken, amountIn, chunks) {
-        chunks = chunks || 1
-        const outs = await getRouteAmountOuts(inputToken, outputToken, amountIn.div(chunks))
-        // console.error(outs.map(out => out && out.amountOut.toString()))
-
-        function amountOutSubFee(out) {
-            return out.mid ? out.amountOut.div(midFee) : out.amountOut
+    async function getBestDistribution(inputToken, outputToken, amountIn) {
+        function setChunk(chunks, index, value) {
+            chunks = [...chunks]
+            chunks[index] = value
+            const before = sum(chunks) - chunks[index]
+            if (!before) {
+                return
+            }
+            const after = CHUNK_TOTAL - chunks[index]
+            for (let i = 0; i < chunks.length; ++i) {
+                if (i == index) continue
+                chunks[i] = Math.floor(chunks[i] * after / before)
+            }
+            let remain = CHUNK_TOTAL - sum(chunks)
+            for (let i = 0; i < DEXES.length && remain > 0; ++i) {
+                const pi = DEXES_PRIORITY[i]
+                if (pi != index && chunks[pi]) {
+                    ++chunks[pi]
+                    --remain
+                }
+            }
+            if (CHUNK_TOTAL != sum(chunks)) {
+                console.error("CHUNK_TOTAL != sum(chunks)", chunks, index, value)
+                throw "CHUNK_TOTAL != sum(chunks)"
+            }
+            return chunks
         }
 
-        const sorted = outs.filter(a => !!a).sort((b, a) => {
-            const aa = amountOutSubFee(a)
-            const bb = amountOutSubFee(b)
-            if (aa.gt(bb)) {
-                return 1
-            }
-            if (aa.lt(bb)) {
-                return -1
-            }
-            return 0
-        })
-        const bests = sorted.slice(0, chunks)
-        // console.error({sorted, bests})
+        function reduceChunk(chunks, index) {
+            return setChunk(chunks, index, chunks[index] >> 1)
+        }
 
-        const amountOut = bests.reduce((amountOut, out) => out.amountOut.add(amountOut), bn.from(0))
+        function amountOutSubFee(out) {
+            return out.mid ? out.amountOut.sub(midFee) : out.amountOut
+        }
 
-        // console.error({ amountOut: amountOut.toString(), distribution })
-        return [ amountOut, bests ]
+        function sumOut(outs) {
+            return outs.reduce((total, out) => {
+                if (!out || !out.amountOut || out.amountOut.isZero()) {
+                    return total
+                }
+                return total.add(out.amountOut)
+            }, bn.from(0))
+        }
+
+        function sumOutSubFee(outs) {
+            return outs.reduce((total, out) => {
+                if (!out || !out.amountOut || out.amountOut.isZero()) {
+                    return total
+                }
+                return total.add(amountOutSubFee(out))
+            }, bn.from(0))
+        }
+
+        function leastIndex(outs) {
+            return outs.reduce((least, out) => {
+                if (!out || !out.amountOut || out.amountOut.isZero()) {
+                    return least
+                }
+                const a = amountOutSubFee(out)
+                return a < least ? a : least
+            }, bn.from(0))
+        }
+
+        let chunks = new Array(DEXES.length).fill(Math.floor(CHUNK_TOTAL/DEXES.length))
+        setChunk(chunks, chunks.length-1, chunks[chunks.length-1])
+        let outs
+        let amountOut
+
+        for (let i = 0; i < 100; ++i) {
+            let matrix = [ chunks ]
+            for (let j in chunks) {
+                if (chunks[j]) {
+                    matrix.push(setChunk(chunks, j, 0), reduceChunk(chunks, j))
+                }
+            }
+            matrix = matrix.filter(m => m)
+
+            const matrixOuts = await Bluebird.map(matrix, chunks => getRouteAmountOuts(inputToken, outputToken, amountIn, chunks))
+            // const matrixSumOut = matrixOuts.map(outs => sumOut(outs))
+            const matrixSumOutSubFee = matrixOuts.map(outs => sumOutSubFee(outs))
+            // console.error(matrixSumOutSubFee.map(s => s.toString()))
+
+            const bestIndex = matrixSumOutSubFee.reduce((bestIndex, v, i) => v.gt(matrixSumOutSubFee[bestIndex]) ? i : bestIndex, 0)
+            if (bestIndex == 0) {
+                // console.error(matrix, matrixSumOutSubFee.map(s => s.toString()), matrixSumOutSubFee.map(s => s.toString()))
+                amountOut = sumOut(matrixOuts[bestIndex])
+                outs = matrixOuts[bestIndex]
+                break
+            }
+            // console.error(bestIndex, matrixSumOutSubFee[bestIndex].toString(), matrixSumOutSubFee[0].toString())
+            chunks = matrix[bestIndex]
+            console.error(chunks)
+
+            // console.error(outs.map(out => out && out.amountOut.toString()))
+        }
+
+        // console.error(chunks, outs.filter(out => out))
+        return [ amountOut, chunks, outs.filter(out => out) ]
     }
 
     for (let nom = 0; nom <= (maxMids||3); ++nom) {
         await findBest(nom)
+        return
     }
 
     async function findBest(nom) {
@@ -354,17 +440,10 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
             const distribution = new Array(DEXES.length).fill('')
             const dexes = []
             for (let i = 1; i < tokens.length; ++i) {
-                const [ amountOut, routes ] = await getBestDistribution(tokens[i-1], tokens[i], pathAmountOut, 1)
+                const [ amountOut, dist, routes ] = await getBestDistribution(tokens[i-1], tokens[i], pathAmountOut)
 
-                const dist = DEXES.map(dex => {
-                    if (!dex) return '00'
-                    if (!routes.some(best => best.swap == dex.swap && best.mid == dex.mid)) {
-                        return '00'
-                    }
-                    return '01'
-                })
                 for (let j = 0; j < distribution.length; ++j) {
-                    distribution[j] = dist[j] + distribution[j]
+                    distribution[j] = dist[j] + (distribution[j] << 8)
                 }
 
                 dexes.push(routes)
