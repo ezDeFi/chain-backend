@@ -310,23 +310,10 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
         const bests = sorted.slice(0, chunks)
         // console.error({sorted, bests})
 
-        const distribution = outs.map(out => {
-            if (!out) return '00'
-            if (!bests.some(best => best.swap == out.swap && best.mid == out.mid)) {
-                return '00'
-            }
-            return '01'
-        })
-        const amountOut = outs.reduce((amountOut, out) => {
-            if (!out) return amountOut
-            if (!bests.some(best => best.swap == out.swap && best.mid == out.mid)) {
-                return amountOut
-            }
-            return out.amountOut.add(amountOut)
-        }, bn.from(0))
+        const amountOut = bests.reduce((amountOut, out) => out.amountOut.add(amountOut), bn.from(0))
 
         // console.error({ amountOut: amountOut.toString(), distribution })
-        return [ amountOut, distribution, bests ]
+        return [ amountOut, bests ]
     }
 
     for (let nom = 0; nom <= (maxMids||3); ++nom) {
@@ -335,38 +322,48 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
 
     async function findBest(nom) {
         const best = {
-            amountOut: 0,
+            amount: 0,
             distribution: [],
-            tokens: [],
-            dexes: [],
+            path: [],
+            pathRoutes: [],
         }
 
         for (const mids of MULTI_MIDS[nom]) {
             const tokens = _.flatten([inputToken, mids, outputToken])
                 .filter((t, i, tokens) => t != tokens[i-1] != t)    // remove adjenced duplicates
 
-            let amountOut = bn.from(amountIn)
+            let pathAmountOut = bn.from(amountIn)
             const distribution = new Array(DEXES.length).fill('')
             const dexes = []
             for (let i = 1; i < tokens.length; ++i) {
-                [ amountOut, dist, dx ] = await getBestDistribution(tokens[i-1], tokens[i], amountOut, 1)
+                const [ amountOut, routes ] = await getBestDistribution(tokens[i-1], tokens[i], pathAmountOut, 1)
+
+                const dist = DEXES.map(dex => {
+                    if (!dex) return '00'
+                    if (!routes.some(best => best.swap == dex.swap && best.mid == dex.mid)) {
+                        return '00'
+                    }
+                    return '01'
+                })
                 for (let j = 0; j < distribution.length; ++j) {
                     distribution[j] = dist[j] + distribution[j]
                 }
-                dexes.push(dx)
+
+                dexes.push(routes)
+                pathAmountOut = amountOut
             }
             // console.error({amountOut, distribution, tokens})
-            if (amountOut.gt(best.amountOut)) {
+            if (pathAmountOut.gt(best.amount)) {
                 // console.error(amountOut.toString())
-                best.amountOut = amountOut
+                best.amount = pathAmountOut
                 best.distribution = distribution.map(d => '0x'+d)
-                best.tokens = tokens
-                best.dexes = dexes
+                best.path = tokens
+                best.pathRoutes = dexes
             }
         }
 
         let hops = 0
-        const dexes = best.dexes.map(dx => dx.map(d => {
+        const routeNames = best.pathRoutes.map(dx => dx.map(d => {
             if (!d.mid) {
                 hops++
                 return d.swap
@@ -374,27 +371,26 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
             hops += 2
             return `${d.swap} over ${tokenName(d.mid)}`
         }))
-
-        const route = []
-        for (let i = 0; i < best.tokens.length; ++i) {
-            route.push(tokenName(best.tokens[i]))
-            if (i < dexes.length) {
-                route.push(dexes[i])
+        const routeList = []
+        for (let i = 0; i < best.path.length; ++i) {
+            routeList.push(tokenName(best.path[i]))
+            if (i < routeNames.length) {
+                routeList.push(routeNames[i])
             }
         }
-        
+
         const predictedGas = predictGas(hops)
         const fee = await getGasAsToken(outputToken, gasPrice.mul(predictedGas))
 
         console.error('=========', {nom, hops, predictedGas})
-        console.error(route)
-        console.error('amountOut', best.amountOut.toString(), '-', fee.toString(), '=', best.amountOut.sub(fee).toString())
+        console.error(routeList)
+        console.error('amountOut', best.amount.toString(), '-', fee.toString(), '=', best.amount.sub(fee).toString())
 
         const flag = 0x0 // 0x40000
-        const flags = new Array(best.tokens.length-1).fill(flag)
+        const flags = new Array(best.path.length-1).fill(flag)
 
         const { data } = await CONTRACTS.swapX.populateTransaction.swapMulti(
-            best.tokens,
+            best.path,
             amountIn,
             0,
             best.distribution,
@@ -419,7 +415,7 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
         try {
             const returnAmount = await CONTRACTS.swapXProxy.callStatic.swap(...params)
             console.error('returnAmount', returnAmount.toString())
-            const accuracy = returnAmount.mul(10000).div(best.amountOut).toNumber() / 100
+            const accuracy = returnAmount.mul(10000).div(best.amount).toNumber() / 100
             console.error(`accuracy ${accuracy}%`)
             const gas = await CONTRACTS.swapXProxy.estimateGas.swap(...params)
             console.error('estimatedGas', gas.toString(), `= ${gas.mul(10000).div(predictedGas).toNumber()/100}%`)
