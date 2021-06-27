@@ -1,7 +1,7 @@
 const Bluebird = require('bluebird')
 const _ = require('lodash')
 const ConfigModel = require("../models/ConfigModel")
-const { mergeTopics, mergeAddress } = require("../helpers/logs")
+const { mergeRequests } = require("../helpers/logs")
 
 const createProccesor = ({config, consumers}) => {
     const process = async (head) => {
@@ -41,9 +41,7 @@ const createProccesor = ({config, consumers}) => {
             var hasMoreBlock = true
         }
 
-        const address = mergeAddress(requests)
-        const topics = mergeTopics(requests.map(r => r.topics))
-        const logs = await config.getLogs({ address, topics, fromBlock, toBlock })
+        const logs = await config.getLogs(mergeRequests({requests, fromBlock, toBlock}))
 
         if (!logs) {
             return false // failed

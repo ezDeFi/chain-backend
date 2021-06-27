@@ -1,7 +1,7 @@
 const Bluebird = require('bluebird')
 const _ = require('lodash')
 const ConfigModel = require("../models/ConfigModel")
-const { mergeTopics, mergeAddress } = require("../helpers/logs")
+const { mergeRequests } = require("../helpers/logs")
 
 const createProccesor = ({config, consumers}) => {
     const _splitChunks = (from, to, count) => {
@@ -16,17 +16,6 @@ const createProccesor = ({config, consumers}) => {
             }
         });
         return blocks;
-    }
-
-    const _getLogsInRange = ({requests, fromBlock, toBlock}) => {
-        const inRangeRequests = requests.filter(r => r.from <= toBlock && (!r.to || r.to >= fromBlock))
-        if (inRangeRequests.length == 0) {
-            // console.log(`no request in range ${fromBlock} +${toBlock-fromBlock}`)
-            return []
-        }
-        const address = mergeAddress(requests)
-        const topics = mergeTopics(inRangeRequests.map(r => r.topics))
-        return config.getLogs({ address, fromBlock, toBlock, topics})
     }
 
     const process = async () => {
@@ -54,7 +43,7 @@ const createProccesor = ({config, consumers}) => {
 
         const chunks = _splitChunks(fromBlock, toBlock, concurrency);
         const logs = await Bluebird.map(chunks, ({ from: fromBlock, to: toBlock }, i) => {
-            return _getLogsInRange({ requests, fromBlock, toBlock })
+            return config.getLogs(mergeRequests({requests, fromBlock, toBlock}))
         }, { concurrency }).then(_.flatten);
     
         if (!logs) {

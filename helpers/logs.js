@@ -40,3 +40,16 @@ exports.mergeAddress = (requests) => {
     }
     return _.flatten(requests.filter(r => !!r.address).map(r => r.address))
 }
+
+exports.mergeRequests = ({requests, fromBlock, toBlock}, getLogsFn) => {
+    requests = requests
+        .filter(r => !toBlock || r.from <= toBlock)
+        .filter(r => !r.to || r.to >= fromBlock)
+    if (requests.length == 0) {
+        // console.log(`no request in range ${fromBlock} +${toBlock-fromBlock}`)
+        return []
+    }
+    const address = exports.mergeAddress(requests)
+    const topics = exports.mergeTopics(requests.map(r => r.topics))
+    return {address, fromBlock, toBlock, topics}
+}
