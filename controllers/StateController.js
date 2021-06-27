@@ -1,6 +1,7 @@
 const _ = require('lodash');
 const apiResponse = require("../helpers/apiResponse");
 const LogsStateModel = require('../models/LogsStateModel')
+const ConfigModel = require('../models/ConfigModel')
 var mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
@@ -22,7 +23,7 @@ exports.query = [
 				var keys = key.split(',')
 			}
 
-			const states = await LogsStateModel.find({ key: { $in: keys } }).lean()
+			const states = await ConfigModel.find({ key: { $in: keys } }).lean()
 			const ret = states
 				.filter(s => !!s)
 				.reduce((res, s, i) => ({...res, [s.key]: s.value}), {})
