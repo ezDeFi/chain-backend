@@ -5,7 +5,7 @@ const { mergeRequests } = require("../helpers/logs")
 
 const createProccesor = ({config, consumers}) => {
     const process = async (head) => {
-        const maxRange = 1 + (config.getSize() >> 1)
+        const maxRange = config.getSize()
     
         let lastHead = await ConfigModel.findOne({
             key: 'lastHead'
