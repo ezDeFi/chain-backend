@@ -80,13 +80,13 @@ module.exports = ({key, filter, applyLogs}) => {
     return {
         key,
 
-        getRequests: async ({maxRange, lastHead}) => {
+        getRequests: async ({maxRange, lastHead, head}) => {
             const { address, topics } = filter
             const state = await LogsStateModel.findOne({ key }).lean() || {
                 value: null,
                 range: null,
             }
-            const from = (state.range || lastHead) + 1
+            const from = Math.max(state.range || lastHead, head ? head - maxRange : 0) + 1
             return { key, address, topics, from, processLogs }
         },
     }
