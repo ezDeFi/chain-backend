@@ -24,7 +24,7 @@ const createProccesor = ({config, consumers}) => {
             return  // nothing to do
         }
 
-        const requests = await Bluebird.map(consumers, c => c.getRequests({maxRange, lastHead}))
+        const requests = await Bluebird.map(consumers, c => c.getRequests({maxRange, lastHead, head}))
             .then(_.flatten)
             .filter(r => r.from > lastHead)
     
@@ -35,7 +35,7 @@ const createProccesor = ({config, consumers}) => {
         console.log('++++ HEAD', { lastHead, head })
         console.log(requests.map(({key, from, to}) => `\t${key}:\t${from}${to ? ` +${to-from}` : ''}`).join('\n'))
     
-        const fromBlock = lastHead + 1
+        const fromBlock = Math.min(lastHead+1, ...requests.map(r => r.from))
         if (fromBlock + maxRange <= head) {
             var toBlock = fromBlock + maxRange - 1
             var hasMoreBlock = true
