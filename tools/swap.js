@@ -4,6 +4,8 @@ const { ZERO_ADDRESS, ZERO_HASH, ONE_HASH, TEN_HASH } = require('../helpers/cons
 const Bluebird = require('bluebird')
 const LogsStateModel = require('../models/LogsStateModel')
 const ConfigModel = require('../models/ConfigModel')
+const UniswapV2Router01 = require('../ABIs/UniswapV2Router01.json').abi
+const UniswapV2Pair = require('../ABIs/UniswapV2Pair.json').abi
 const { JsonRpcProvider } = require('@ethersproject/providers')
 var mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
@@ -113,10 +115,10 @@ function getRouterContract(swap) {
         console.warn(`WARN: no router address for ${swap}`)
         return
     }
-    return CONTRACTS[swap] = new ethers.Contract(ROUTERS[swap], require('../ABIs/UniswapV2Router01.json').abi, provider)
+    return CONTRACTS[swap] = new ethers.Contract(ROUTERS[swap], UniswapV2Router01, provider)
 }
 
-function _getAmountOut(swap, amountIn, reserveIn, reserveOut) {
+async function _getAmountOut(swap, amountIn, reserveIn, reserveOut) {
     if (!amountIn || amountIn.isZero()) {
         return 0
     }
@@ -125,13 +127,15 @@ function _getAmountOut(swap, amountIn, reserveIn, reserveOut) {
     const numerator = amountInWithFee.mul(reserveOut)
     const denominator = bn.from(reserveIn).mul(10000).add(amountInWithFee)
     const amountOut = numerator.div(denominator)
-    // const contract = getRouterContract(swap)
-    // if (contract) {
-    //     const contractOut = await contract.callStatic.getAmountOut(amountIn, reserveIn, reserveOut)
-    //     if (!amountOut.eq(contractOut)) {
-    //         console.error('getAmountOut: WRONG calculation', {swap, fee10000, amountOut: amountOut.toString(), contractOut: contractOut.toString()})
-    //     }
-    // }
+    if (process.env.DEBUG) {
+        const contract = getRouterContract(swap)
+        if (contract) {
+            const contractOut = await contract.callStatic.getAmountOut(amountIn, reserveIn, reserveOut)
+            if (!amountOut.eq(contractOut)) {
+                console.error('getAmountOut: WRONG calculation', {swap, fee10000, amountOut: amountOut.toString(), contractOut: contractOut.toString()})
+            }
+        }
+    }
     return amountOut
 }
 
@@ -186,22 +190,23 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
     async function findPair(swap, inputToken, outputToken) {
         const keyF = `${swap}-PairCreated-${inputToken}-${outputToken}`
         if (cachePairs[keyF]) {
-            return { pair: cachePairs[keyF] }
+            return { address: cachePairs[keyF] }
         }
         const keyB = `${swap}-PairCreated-${outputToken}-${inputToken}`
         if (cachePairs[keyB]) {
-            return { pair: cachePairs[keyB], backward: true }
+            return { address: cachePairs[keyB], backward: true }
         }
         const object = await ConfigModel.findOne(({ key: { $in: [ keyF, keyB ] } })).lean()
         if (object) {
             cachePairs[object.key] = object.value
-            return { pair: object.value, backward: object.key == keyB }
+            return { address: object.value, backward: object.key == keyB }
         }
         return {}
     }
 
     const cacheReserves = {}
-    async function getReserves(address, backward) {
+    async function getReserves(swap, inputToken, outputToken) {
+        const { address, backward } = await findPair(swap, inputToken, outputToken)
         if (cacheReserves[address]) {
             const [ r0, r1 ] = cacheReserves[address]
             return backward ? [ r1, r0 ] : [ r0, r1 ]
@@ -213,6 +218,20 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
             return []
         }
         const [ r0, r1 ] = reserve.split('/').map(r => bn.from('0x'+r))
+
+        if (process.env.DEBUG) {
+            const contract = new ethers.Contract(address, UniswapV2Pair, provider)
+            if (contract) {
+                const { _reserve0, _reserve1 } = await contract.callStatic.getReserves()
+                const a = r0.mul(_reserve1)
+                const b = r1.mul(_reserve0)
+                if (!a.eq(b)) {
+                    const acc = a.mul(1000).div(b).sub(1000)
+                    console.error(`Reserve accurracy: ${(acc.toNumber()/10)}% ${swap} ${inputToken} ${outputToken}`)
+                }
+            }
+        }
+
         cacheReserves[address] = [ r0, r1 ]
         return backward ? [ r1, r0 ] : [ r0, r1 ]
     }
@@ -221,12 +240,11 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
         if (!ROUTERS.hasOwnProperty(swap)) {
             return 0
         }
-        const { pair, backward } = await findPair(swap, inputToken, outputToken)
-        const [ rin, rout ] = await getReserves(pair, backward)
+        const [ rin, rout ] = await getReserves(swap, inputToken, outputToken)
         if (!rin || !rout) {
             return 0
         }
-        const amountOut = _getAmountOut(swap, amountIn, rin, rout)
+        const amountOut = await _getAmountOut(swap, amountIn, rin, rout)
         const slippage = amountOut.mul(rin).mul(100).div(amountIn).div(rout)
         if (slippage < 80) {
             return 0    // SLIPPAGE
