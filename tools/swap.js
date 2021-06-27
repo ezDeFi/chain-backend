@@ -233,9 +233,9 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
                 const { _reserve0, _reserve1 } = await contract.callStatic.getReserves()
                 const a = r0.mul(_reserve1)
                 const b = r1.mul(_reserve0)
-                if (!a.eq(b)) {
-                    const acc = a.mul(1000).div(b).sub(1000)
-                    console.error(`Reserve accurracy: ${(acc.toNumber()/10)}% ${swap} ${inputToken} ${outputToken}`)
+                const acc = a.mul(1000).div(b).sub(1000).toNumber()/10
+                if (acc < -0.1 || acc > 0.1) {
+                    console.error(`Reserve accurracy: ${acc}% ${swap} ${inputToken} ${outputToken}`)
                 }
             }
         }
