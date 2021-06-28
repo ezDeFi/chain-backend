@@ -320,16 +320,6 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
     console.error({midFee: midFee.toString()})
 
     async function getBestDistribution(inputToken, outputToken, amountIn) {
-        function setChunk(chunks, index, value) {
-            chunks = [...chunks]
-            chunks[index] = value
-            return chunks
-        }
-
-        function reduceChunk(chunks, index) {
-            return setChunk(chunks, index, chunks[index] >> 1)
-        }
-
         function amountOutSubFee(out) {
             return out.mid ? out.amountOut.sub(midFee) : out.amountOut
         }
@@ -349,16 +339,6 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
                     return total
                 }
                 return total.add(amountOutSubFee(out))
-            }, bn.from(0))
-        }
-
-        function leastIndex(outs) {
-            return outs.reduce((least, out) => {
-                if (!out || !out.amountOut || out.amountOut.isZero()) {
-                    return least
-                }
-                const a = amountOutSubFee(out)
-                return a < least ? a : least
             }, bn.from(0))
         }
 
