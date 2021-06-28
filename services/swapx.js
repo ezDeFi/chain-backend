@@ -9,6 +9,7 @@ const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 const { ethers } = require('ethers')
 const bn = ethers.BigNumber
+const bscUtil = require('bsc_util')
 
 var provider
 function getProvider() {
@@ -172,6 +173,12 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
 
     const cachePairs = {}
     async function findPair(swap, inputToken, outputToken) {
+        if (swap != 'bakery') {
+            return {
+                address: ethers.utils.getAddress(bscUtil.findPair(swap, inputToken, outputToken)),
+                backward: inputToken.toLowerCase() > outputToken.toLowerCase(),
+            }
+        }
         const keyF = `${swap}-PairCreated-${inputToken}-${outputToken}`
         if (cachePairs[keyF]) {
             return { address: cachePairs[keyF] }
