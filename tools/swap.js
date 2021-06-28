@@ -14,11 +14,11 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         })
             .then(() => process.exit(0))
             .catch(err => {
-                console.error("Execution error:", err.message);
+                console.error("Execution error:", err);
                 process.exit(1);
             });
     })
     .catch(err => {
-        console.error("App starting error:", err.message);
+        console.error("App starting error:", err);
         process.exit(1);
     });
