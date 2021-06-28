@@ -294,9 +294,10 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
     }
 
     function getRouteAmountOuts(inputToken, outputToken, amount, chunks) {
+        const total = sum(chunks)
         return Bluebird.map(DEXES, async ({swap, mid}, i, n) => {
             if (!chunks[i]) return
-            const amountIn = amount.mul(chunks[i]).div(CHUNK_TOTAL)
+            const amountIn = amount.mul(chunks[i]).div(total)
             if (!amountIn || amountIn.isZero()) {
                 return
             }
@@ -322,27 +323,6 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
         function setChunk(chunks, index, value) {
             chunks = [...chunks]
             chunks[index] = value
-            const before = sum(chunks) - chunks[index]
-            if (!before) {
-                return
-            }
-            const after = CHUNK_TOTAL - chunks[index]
-            for (let i = 0; i < chunks.length; ++i) {
-                if (i == index) continue
-                chunks[i] = Math.floor(chunks[i] * after / before)
-            }
-            let remain = CHUNK_TOTAL - sum(chunks)
-            for (let i = 0; i < DEXES.length && remain > 0; ++i) {
-                const pi = DEXES_PRIORITY[i]
-                if (pi != index && chunks[pi]) {
-                    ++chunks[pi]
-                    --remain
-                }
-            }
-            if (CHUNK_TOTAL != sum(chunks)) {
-                console.error("CHUNK_TOTAL != sum(chunks)", chunks, index, value)
-                throw "CHUNK_TOTAL != sum(chunks)"
-            }
             return chunks
         }
 
@@ -382,16 +362,29 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
             }, bn.from(0))
         }
 
-        let chunks = new Array(DEXES.length).fill(Math.floor(CHUNK_TOTAL/DEXES.length))
-        setChunk(chunks, chunks.length-1, chunks[chunks.length-1])
+        let chunks = new Array(DEXES.length).fill(Math.floor(128))
         let outs
-        let amountOut
+        let failedChunks
 
         for (let i = 0; i < 100; ++i) {
             let matrix = [ chunks ]
+            if (failedChunks && failedChunks.length) {
+                const nextChunks = [...chunks]
+                failedChunks.forEach(j => {
+                    nextChunks[j] >>= 1
+                })
+                matrix.push(nextChunks)
+            } else if (outs) {
+                // TODO: reduce by priority and last amountOut
             for (let j in chunks) {
                 if (chunks[j]) {
-                    matrix.push(setChunk(chunks, j, 0), reduceChunk(chunks, j))
+                        const removedOneChunks = [...chunks]
+                        removedOneChunks[j] = 0
+                        matrix.push(removedOneChunks)
+                        const halfOneChunks = [...chunks]
+                        halfOneChunks[j] >>= 1
+                        matrix.push(halfOneChunks)
+                    }
                 }
             }
             matrix = matrix.filter(m => m)
@@ -402,18 +395,29 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
             // console.error(matrixSumOutSubFee.map(s => s.toString()))
 
             const bestIndex = matrixSumOutSubFee.reduce((bestIndex, v, i) => v.gt(matrixSumOutSubFee[bestIndex]) ? i : bestIndex, 0)
-            if (bestIndex == 0) {
-                // console.error(matrix, matrixSumOutSubFee.map(s => s.toString()), matrixSumOutSubFee.map(s => s.toString()))
-                amountOut = sumOut(matrixOuts[bestIndex])
+            chunks = matrix[bestIndex]
                 outs = matrixOuts[bestIndex]
+
+            // console.error(chunks, bestIndex)
+
+            failedChunks = outs.reduce((failedChunks, s, i) => {
+                if (chunks[i] && (!s || !s.amountOut || s.amountOut.isZero())) {
+                    failedChunks.push(i)
+                }
+                return failedChunks
+            }, [])
+
+            if (failedChunks.length) {
+                continue
+            }
+
+            if (bestIndex == 0 && i > 0) {
                 break
             }
-            // console.error(bestIndex, matrixSumOutSubFee[bestIndex].toString(), matrixSumOutSubFee[0].toString())
-            chunks = matrix[bestIndex]
-            console.error(chunks)
-
-            // console.error(outs.map(out => out && out.amountOut.toString()))
         }
+
+        const amountOut = sumOut(outs)
+        // console.error({amountOut: amountOut.toString()})
 
         // console.error(chunks, outs.filter(out => out))
         return [ amountOut, chunks, outs.filter(out => out) ]
