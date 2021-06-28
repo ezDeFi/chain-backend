@@ -30,7 +30,7 @@ const MIDS = [
     TOKENS.DAI,
 ]
 
-const MULTI_MIDS = [ [[]], MIDS, [], [] ]
+const MULTI_MIDS = [ [[]], MIDS.map(m => [m]), [], [] ]
 for (let i = 0; i < MIDS.length; ++i) {
     for (let j = 0; j < MIDS.length; ++j) {
         if (i != j) {
@@ -245,9 +245,13 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
                 return amountOut
             }
         }
-        for (const mids of MULTI_MIDS) {
-            for (const mid of mids) {
-                const path = [ gasToken, ...mid, token ]
+        for (const mids_nom of MULTI_MIDS) {
+            for (const mids of mids_nom) {
+                if (gasToken == mids[0] || mids[mids.length-1] == token) {
+                    continue
+                }
+                const path = [gasToken, ...mids, token]
+
                 for (const swap in ROUTERS) {
                     const amountOut = await getRouteAmountOut(swap, path, wei)
                     if (amountOut && !amountOut.isZero()) {
@@ -392,8 +396,10 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
         }
 
         for (const mids of MULTI_MIDS[nom]) {
-            const tokens = _.flatten([inputToken, mids, outputToken])
-                .filter((t, i, tokens) => t != tokens[i-1] != t)    // remove adjenced duplicates
+            if (inputToken == mids[0] || mids[mids.length-1] == outputToken) {
+                continue
+            }
+            const tokens = [inputToken, ...mids, outputToken]
 
             let pathAmountOut = bn.from(amountIn)
             const distribution = new Array(DEXES.length).fill('')
