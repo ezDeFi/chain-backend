@@ -412,7 +412,7 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
             if (pathAmountOut.gt(best.amount)) {
                 // console.error(amountOut.toString())
                 best.amount = pathAmountOut
-                best.distribution = distribution.map(d => '0x'+d)
+                best.distribution = distribution
                 best.path = tokens
                 best.pathRoutes = dexes
             }
