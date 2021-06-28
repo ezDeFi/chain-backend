@@ -16,7 +16,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
             outputToken: TOKENS.CAKE,
             amountIn: '100'+'0'.repeat(18),
             trader: '0xC06F7cF8C9e8a8D39b0dF5A105d66127912Bc980',
-            maxMids: 1,
+            noms: process.env.NOMS ? process.env.NOMS.split(',').map(n => parseInt(n)) : [0, 1, 2],
         })
             .then(() => process.exit(0))
             .catch(err => {
@@ -188,9 +188,9 @@ function hopsGas(hops) {
     return hops * 120000
 }
 
-async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPrice, gasToken }) {
+async function swap({ inputToken, outputToken, amountIn, trader, noms, gasPrice, gasToken }) {
     trader = trader || ZERO_ADDRESS
-    maxMids = maxMids == null ? 3 : maxMids
+    noms = noms == null ? [0, 1] : noms
     gasPrice = bn.from(gasPrice || '5'+'0'.repeat(9))
     gasToken = gasToken || TOKENS.WBNB
 
@@ -403,12 +403,12 @@ async function swap({ inputToken, outputToken, amountIn, trader, maxMids, gasPri
         return [ amountOut, chunks, outs.filter(out => out) ]
     }
 
-    for (let nom = 0; nom <= (maxMids||3); ++nom) {
-        await findBest(nom)
-        return
-    }
+    await Bluebird.map(noms, findBest)
 
     async function findBest(nom) {
+        if (nom >= MULTI_MIDS.length) {
+            throw new Error('nom out of range: ' + nom)
+        }
         const best = {
             amount: 0,
             distribution: [],
