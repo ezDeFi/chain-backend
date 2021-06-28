@@ -3,6 +3,6 @@ const SwapController = require("../controllers/SwapController");
 
 var router = express.Router();
 
-router.get("/query/:key?", SwapController.query);
+router.get("/find/:inputToken/:outputToken/:amountIn", SwapController.find);
 
 module.exports = router;
