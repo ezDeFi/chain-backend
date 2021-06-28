@@ -467,6 +467,10 @@ async function swap({ inputToken, outputToken, amountIn, trader, noms, gasPrice,
         console.error(routeList)
         console.error('amountOut', best.amount.toString(), '-', fee.toString(), '=', best.amount.sub(fee).toString())
 
+        if (!process.env.VERIFY) {
+            return
+        }
+
         const flag = 0x0 // 0x40000
         const flags = new Array(best.path.length-1).fill(flag)
 
