@@ -81,7 +81,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
                     gas,
                 }
             } catch(err) {
-                console.error(err)
+                console.error(err.reason || err)
             }
         })
 
