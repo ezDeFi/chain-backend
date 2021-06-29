@@ -309,57 +309,64 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
             }, bn.from(0))
         }
 
-        let chunks = new Array(DEXES.length).fill(Math.floor(128))
-        let outs
-        let failedChunks
+        const zeroOutput = s => (!s || !s.amountOut || s.amountOut.isZero())
 
-        for (let i = 0; i < 64; ++i) {
-            let matrix = [ chunks ]
-            if (failedChunks && failedChunks.length) {
-                for (let shift = 1; shift <= 2; ++shift) {
-                    matrix.push(chunks.map((c, ci) => failedChunks.includes(ci) ? c >> shift : c))
+        // weed out all failed chunks
+        async function clearFailedChunks(chunks) {
+            let outs
+            while (true) {
+                outs = await getRouteAmountOuts(inputToken, outputToken, amountIn, chunks)
+                const hasFailedChunks = outs.some((out, i) => chunks[i] && zeroOutput(out))
+                if (!hasFailedChunks) {
+                    return [ chunks, outs ]
                 }
-            } else if (outs) {
-                // TODO: reduce by priority and last amountOut
-                for (let j in chunks) {
-                    if (chunks[j]) {
-                        const removedOneChunks = [...chunks]
-                        removedOneChunks[j] = 0
-                        matrix.push(removedOneChunks)
-                        const halfOneChunks = [...chunks]
-                        halfOneChunks[j] >>= 1
-                        matrix.push(halfOneChunks)
-                    }
+                chunks = chunks.map((c, ci) => c && zeroOutput(outs[ci]) ? c >> 1 : c)
+                if (!chunks.some(c => c)) {
+                    return []  // all chunks is cleared but no success
                 }
+                // console.error(chunks)
             }
-            matrix = matrix.filter(m => m)
+        }
+
+        let [ chunks, outs ] = await clearFailedChunks(new Array(DEXES.length).fill(128))
+        if (!chunks) {
+            return []
+        }
+
+        for (let _no_use_ = 0; _no_use_ < 64; ++_no_use_) {
+            let matrix = [ ]
+            // TODO: reduce by priority and last amountOut
+            for (let i in chunks) {
+                if (!chunks[i]) {
+                    continue
+                }
+                const removedOneChunks = [...chunks]
+                removedOneChunks[i] = 0
+                matrix.push(removedOneChunks)
+                const halfOneChunks = [...chunks]
+                halfOneChunks[i] >>= 1
+                matrix.push(halfOneChunks)
+            }
+            if (matrix.length == 0) {
+                break
+            }
 
             const matrixOuts = await Bluebird.map(matrix, chunks => getRouteAmountOuts(inputToken, outputToken, amountIn, chunks))
+
             // const matrixSumOut = matrixOuts.map(outs => sumOut(outs))
-            const matrixSumOutSubFee = matrixOuts.map(outs => sumOutSubFee(outs))
+
+            // insert the previous outs to the end of the array
+            const matrixSumOutSubFee = [...matrixOuts, outs].map(outs => sumOutSubFee(outs))
             // console.error(matrixSumOutSubFee.map(s => s.toString()))
 
             const bestIndex = matrixSumOutSubFee.reduce((bestIndex, v, i) => v.gt(matrixSumOutSubFee[bestIndex]) ? i : bestIndex, 0)
+            if (bestIndex == matrix.length) {
+                break   // the last item in the array is the last success outs
+            }
+
             chunks = matrix[bestIndex]
             outs = matrixOuts[bestIndex]
-
             // console.error(chunks, bestIndex)
-
-            failedChunks = outs.reduce((failedChunks, s, i) => {
-                if (chunks[i] && (!s || !s.amountOut || s.amountOut.isZero())) {
-                    failedChunks.push(i)
-                }
-                return failedChunks
-            }, [])
-
-            if (failedChunks.length) {
-                // console.error(failedChunks)
-                continue
-            }
-
-            if (bestIndex == 0 && i > 0) {
-                break
-            }
         }
 
         const amountOut = sumOut(outs)
