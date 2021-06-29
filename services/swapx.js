@@ -171,28 +171,11 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
     gasPrice = bn.from(gasPrice || '5'+'0'.repeat(9))
     gasToken = ethers.utils.getAddress(gasToken || TOKENS.WBNB)
 
-    const cachePairs = {}
-    async function findPair(swap, inputToken, outputToken) {
-        if (swap != 'bakery') {
-            return {
-                address: ethers.utils.getAddress(bscUtil.findPair(swap, inputToken, outputToken)),
-                backward: inputToken.toLowerCase() > outputToken.toLowerCase(),
-            }
+    function findPair(swap, inputToken, outputToken) {
+        return {
+            address: ethers.utils.getAddress(bscUtil.findPair(swap, inputToken, outputToken)),
+            backward: inputToken.toLowerCase() > outputToken.toLowerCase(),
         }
-        const keyF = `${swap}-PairCreated-${inputToken}-${outputToken}`
-        if (cachePairs[keyF]) {
-            return { address: cachePairs[keyF] }
-        }
-        const keyB = `${swap}-PairCreated-${outputToken}-${inputToken}`
-        if (cachePairs[keyB]) {
-            return { address: cachePairs[keyB], backward: true }
-        }
-        const object = await ConfigModel.findOne(({ key: { $in: [ keyF, keyB ] } })).lean()
-        if (object) {
-            cachePairs[object.key] = object.value
-            return { address: object.value, backward: object.key == keyB }
-        }
-        return {}
     }
 
     const cacheReserves = {}
