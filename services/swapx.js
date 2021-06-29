@@ -85,9 +85,6 @@ function tokenName(address) {
 }
 
 const CONTRACTS = {
-    swapXView: new ethers.Contract('0x99Ab3d8DC4F2130F4E542506A0E9e87bA9ed7d7b', require('../ABIs/SwapXView.abi.json'), getProvider()),
-    swapX: new ethers.Contract('0xAAa6866475564E9070d0330DFCC637D16dfccE17', require('../ABIs/SwapX.abi.json'), getProvider()),
-    swapXProxy: new ethers.Contract('0x887907d19360b32744A56B931a022530567Fbcb3', require('../ABIs/SwapXProxy.abi.json'), getProvider()),
 }
 function getRouterContract(swap) {
     if (CONTRACTS[swap]) {
@@ -441,46 +438,6 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
         console.log('=========', {nom, hops, predictedGas})
         console.log(routeList)
         console.log('amountOut', best.amount.toString(), '-', fee.toString(), '=', best.amount.sub(fee).toString())
-
-        if (process.env.VERIFY) {
-            const flag = 0x0 // 0x40000
-            const flags = new Array(best.path.length-1).fill(flag)
-
-            const { data } = await CONTRACTS.swapX.populateTransaction.swapMulti(
-                best.path,
-                amountIn,
-                0,
-                best.distribution,
-                flags,
-                trader,
-            )
-
-            const params = [
-                inputToken,
-                outputToken,
-                trader,
-                amountIn,
-                1,
-                trader,
-                data,
-                {
-                    gasLimit: predictedGas * 2,
-                    from: trader,
-                }
-            ]
-
-            try {
-                const returnAmount = await CONTRACTS.swapXProxy.callStatic.swap(...params)
-                console.log('returnAmount', returnAmount.toString())
-                const accuracy = returnAmount.mul(10000).div(best.amount).toNumber() / 100
-                console.log(`accuracy ${accuracy}%`)
-                const gas = await CONTRACTS.swapXProxy.estimateGas.swap(...params)
-                console.log('estimatedGas', gas.toString(), `= ${gas.mul(10000).div(predictedGas).toNumber()/100}%`)
-            } catch (err) {
-                console.error('Error', err.reason || err)
-                // await getRouteAmountOuts(inputToken, outputToken, amountIn, true)
-            }
-        }
 
         return {
             amountOut: best.amount.toString(),
