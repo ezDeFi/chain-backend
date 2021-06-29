@@ -56,8 +56,8 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
             )
     
             const params = [
-                inputToken,
-                outputToken,
+                tokens[0],
+                tokens[tokens.length-1],
                 trader,
                 amountIn,
                 1,

@@ -161,7 +161,13 @@ function hopsGas(hops) {
 
 async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPrice, gasToken }) {
     inputToken = ethers.utils.getAddress(inputToken)
+    if (inputToken == TOKENS.BNB) {
+        inputToken = TOKENS.WBNB
+    }
     outputToken = ethers.utils.getAddress(outputToken)
+    if (outputToken == TOKENS.BNB) {
+        outputToken = TOKENS.WBNB
+    }
     amountIn = bn.from(amountIn)
     trader = ethers.utils.getAddress(trader || ZERO_ADDRESS)
     noms = noms == null ? [0, 1] : noms
@@ -225,6 +231,9 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
 
     let _cacheGasRoute
     async function getGasAsToken(token, wei) {
+        if (token == gasToken) {
+            return wei
+        }
         if (_cacheGasRoute) {
             const { swap, path } = _cacheGasRoute
             const amountOut = await getRouteAmountOut(swap, path, wei)
