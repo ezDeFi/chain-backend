@@ -28,7 +28,7 @@ const headProcessor = HeadProcessor.createProccesor({
         type: 'HEAD',
         config: {
             provider,
-            size: CHUNK_SIZE_HARD_CAP,
+            size: 6,
             concurrency: 1,
         },
         hardCap: CHUNK_SIZE_HARD_CAP,

@@ -45,7 +45,7 @@ const createProccesor = ({config, consumers}) => {
         const logs = await Bluebird.map(chunks, ({ from: fromBlock, to: toBlock }, i) => {
             return config.getLogs(mergeRequests({requests, fromBlock, toBlock}))
         }, { concurrency }).then(_.flatten);
-    
+
         if (!logs) {
             return 10000 // failed, wait for 10s
         }

@@ -1,8 +1,10 @@
-var express = require("express");
-var stateRouter = require("./state");
+const express = require("express");
+const cors = require("cors");
+const stateRouter = require("./state");
 
-var app = express();
+const app = express();
 
+app.use(cors());
 app.use("/state/", stateRouter);
 
 module.exports = app;

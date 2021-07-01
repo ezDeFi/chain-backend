@@ -2,7 +2,7 @@ const LogsStateModel = require('../../models/LogsStateModel')
 const { filterLogs } = require('../../helpers/logs')
 const { diff } = require('jsondiffpatch')
 
-module.exports = ({key, filter, genesis, applyLogs}) => {
+module.exports = ({key, filter, applyLogs}) => {
     // reset the state
     // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
 
@@ -14,7 +14,7 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
 
         const state = await LogsStateModel.findOne({ key }).lean() || {
             value: null,
-            range: genesis-1,
+            range: null,
         };
         // console.log('processLogs', {state, logs, fromBlock, toBlock, freshBlock})
         const oldState = {
@@ -67,7 +67,7 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
             const delta = diff(oldState.value, newState.value)
             if (delta) {
                 const changes = Object.keys(delta).length
-                console.log(`ac:${key} update db`, {changes})
+                console.log(`update:${key} update db`, {changes})
             }
             return LogsStateModel.updateOne(
                 { key },
@@ -80,13 +80,13 @@ module.exports = ({key, filter, genesis, applyLogs}) => {
     return {
         key,
 
-        getRequests: async ({maxRange, lastHead}) => {
+        getRequests: async ({maxRange, lastHead, head}) => {
             const { address, topics } = filter
             const state = await LogsStateModel.findOne({ key }).lean() || {
                 value: null,
-                range: genesis-1,
+                range: null,
             }
-            const from = (state.range || lastHead) + 1
+            const from = Math.max(state.range || lastHead, head ? head - maxRange : 0) + 1
             return { key, address, topics, from, processLogs }
         },
     }
