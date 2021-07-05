@@ -19,7 +19,7 @@ module.exports = (key) => {
 
             // assume that the logs is sorted by blockNumber and transactionIndex
             logs.forEach(log => {
-                const address = '0x'+log.topics[1].slice(26)
+                const address = ethers.utils.getAddress('0x'+log.topics[1].slice(26))
                 const level = parseInt(log.data, 16)
                 if (level) {
                     value[address] = level

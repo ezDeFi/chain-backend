@@ -20,7 +20,7 @@ module.exports = (key) => {
 
             // assume that the logs is sorted by blockNumber and transactionIndex
             logs.forEach(log => {
-                const address = '0x'+log.topics[1].slice(26)
+                const address = ethers.utils.getAddress('0x'+log.topics[1].slice(26))
                 if (log.data != ZERO_HASH) {
                     value[address] = true
                 } else {
