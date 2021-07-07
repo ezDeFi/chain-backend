@@ -1,6 +1,8 @@
 const { ethers } = require('ethers');
 const apiResponse = require("../helpers/apiResponse");
+const Bluebird = require('bluebird')
 const { ZERO_ADDRESS } = require("../helpers/constants").hexes
+const LogsStateModel = require('../models/LogsStateModel')
 var mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 
@@ -23,6 +25,30 @@ const ADD_LIQUIDITY_SIGNS = [
 const DEPOSIT_SIGNS = [
 	'e2bbb158', // deposit(uint256,uint256)
 	'441a3e70', // withdraw(uint256,uint256)
+]
+
+exports.state = [
+	async function (req, res) {
+		try {
+			const { key } = req.params
+			const keys = key.split(',').map(k => 'sfarm-'+k)
+
+			console.error({keys})
+
+			const states = await Bluebird.all([
+				LogsStateModel.find({ key: { $in: keys } }).lean(),
+			]).then(_.flatten)
+
+			const ret = states
+				.filter(s => !!s)
+				.reduce((res, s, i) => ({...res, [s.key]: s.value}), {})
+
+			return apiResponse.successResponseWithData(res, "Operation success", ret);
+		} catch (err) {
+			console.error(err)
+			return apiResponse.ErrorResponse(res, err.toString());
+		}
+	}
 ]
 
 exports.queryConfig = [
