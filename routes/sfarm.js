@@ -7,6 +7,6 @@ router.get("/state/:key?", SFarmController.state);
 router.get("/queryConfig/:node?", SFarmController.queryConfig);
 router.get("/query/:address", SFarmController.query);
 router.get("/farmerExec/:tx", SFarmController.farmerExec)
-router.get("/withdraw/:address/:token/:amount", SFarmController.withdraw);
+router.get("/withdraw/:token/:amount/:from?", SFarmController.withdraw);
 
 module.exports = router;
