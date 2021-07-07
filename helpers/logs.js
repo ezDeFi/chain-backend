@@ -25,6 +25,9 @@ exports.mergeTopics = (topics) => {
         .reduce((topics, ts, it) => {
             ts.forEach((t, i) => {
                 t.forEach(ti => {
+                    if (!topics[i]) {
+                        topics[i] = []
+                    }
                     if (!topics[i].includes(ti)) {
                         topics[i].push(ti)
                     }
