@@ -78,5 +78,8 @@ function crawl() {
     // console.error('crawling...')
     pastProcessor.process()
         .then(nextDelay => setTimeout(crawl, nextDelay))
-        .catch((err) => setTimeout(crawl, 1000))
+        .catch((err) => {
+            console.error(err)
+            setTimeout(crawl, 1000)
+        })
 }
