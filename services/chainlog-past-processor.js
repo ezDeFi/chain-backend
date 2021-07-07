@@ -33,18 +33,32 @@ const createProccesor = ({config, consumers}) => {
             return 3000 // no more requests, wait for 3s
         }
     
+        // filter only similar requests, prioritize address > topics[0] > topics[1] > topics[2] > topics[3]
+        if (requests.some(r => r.address)) {
+            requests = requests.filter(r => r.address)
+        }
+        for (let i = 0; i < 4; ++i) {
+            if (requests.some(r => r.topics[i])) {
+                requests = requests.filter(r => r.topics[i])
+            }
+        }
+        // console.error(mergeRequests({requests, fromBlock, toBlock}))
+    
         const fromBlock = Math.min(...requests.map(r => r.from))
         const toBlock = Math.min(fromBlock + maxRange, lastHead)
     
         requests = requests.filter(r => r.from <= toBlock && (!r.to || r.to >= fromBlock))
-    
+
         console.log('PAST ----', { lastHead, fromBlock, toBlock })
         console.log(requests.map(({key, from, to}) => `\t${key}:\t${from} +${(to||toBlock)-from}`).join('\n'))
 
         const chunks = _splitChunks(fromBlock, toBlock, concurrency);
         const logs = await Bluebird.map(chunks, ({ from: fromBlock, to: toBlock }, i) => {
-            return config.getLogs(mergeRequests({requests, fromBlock, toBlock}))
-        }, { concurrency }).then(_.flatten);
+            const merged = mergeRequests({requests, fromBlock, toBlock})
+            if (merged) {
+                return config.getLogs(merged)
+            }
+        }, { concurrency }).then(_.flatten).filter(l => l);
 
         if (!logs) {
             return 10000 // failed, wait for 10s
