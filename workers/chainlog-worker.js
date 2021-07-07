@@ -18,7 +18,7 @@ require("fs").readdirSync(normalizedPath).forEach(file => {
 console.log('State consumers', consumers)
 
 const provider = new JsonRpcProvider({
-	timeout: 3000,
+	timeout: 6000,
 	url: process.env.RPC,
 })
 
