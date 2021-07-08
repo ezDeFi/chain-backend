@@ -23,9 +23,7 @@ module.exports = (key) => {
             logs.forEach(log => {
                 const { address, topics } = log
                 const spender = ethers.utils.getAddress('0x'+topics[2].slice(26))
-                if (!value[spender]) {
-                    value[spender] = {}
-                }
+                value[spender] = value[spender] ? { ...value[spender] } : {}
                 if (log.data != ZERO_HASH) {
                     value[spender][address] = log.data
                 } else {
