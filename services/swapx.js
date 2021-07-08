@@ -409,6 +409,9 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
             const dexes = []
             for (let i = 1; i < tokens.length; ++i) {
                 const [ amountOut, dist, routes ] = await getBestDistribution(tokens[i-1], tokens[i], pathAmountOut)
+                if (!amountOut) {
+                    break
+                }
 
                 for (let j = 0; j < distribution.length; ++j) {
                     distribution[j] = dist[j] + (distribution[j] << 8)
