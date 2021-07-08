@@ -18,7 +18,7 @@ require("fs").readdirSync(normalizedPath).forEach(file => {
 console.log('State consumers', consumers)
 
 const provider = new JsonRpcProvider({
-	timeout: 3000,
+	timeout: 6000,
 	url: process.env.RPC,
 })
 
@@ -78,5 +78,8 @@ function crawl() {
     // console.error('crawling...')
     pastProcessor.process()
         .then(nextDelay => setTimeout(crawl, nextDelay))
-        .catch((err) => setTimeout(crawl, 1000))
+        .catch((err) => {
+            console.error(err)
+            setTimeout(crawl, 1000)
+        })
 }

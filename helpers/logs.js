@@ -19,37 +19,66 @@ exports.filterLogs = (logs, request) => {
     return logs
 }
 
-exports.mergeTopics = (topics) => {
-    return topics
-        .map(ts => ts.map(t => _.isArray(t) ? t : [t])) // wrap all single topic to array
-        .reduce((topics, ts, it) => {
-            ts.forEach((t, i) => {
-                t.forEach(ti => {
-                    if (!topics[i].includes(ti)) {
-                        topics[i].push(ti)
-                    }
-                })
-            })
-            return topics
-        })
+exports.mergeTopics = (topicsList) => {
+    const merged = [[], [], [], []]
+    for (let i = 0; i < 4; ++i) {
+        for (const topics of topicsList) {
+            if (!topics[i]) {
+                delete merged[i]
+                break
+            }
+            for (const topic of _.flatten([topics[i]])) {
+                if (topic && !merged[i].includes(topic)) {
+                    merged[i].push(topic)
+                }
+            }
+        }
+        if (merged[i]) {
+            merged[i] = _.flatten(merged[i])
+            if (!merged[i].length) {
+                delete merged[i]
+            } else if (merged[i].length == 1) {
+                merged[i] = merged[i][0]
+            }
+        }
+    }
+    while(merged.length && !merged[merged.length-1]) {
+        merged.pop()
+    }
+    return merged
 }
 
 exports.mergeAddress = (requests) => {
-    if (requests.some(r => !r.address)) {
-        return undefined
+    const address = []
+    for (const request of requests) {
+        if (!request.address) {
+            return
+        }
+        for (const a of _.flatten([request.address])) {
+            if (a && !address.includes(a)) {
+                address.push(a)
+            }
+        }
     }
-    return _.flatten(requests.filter(r => !!r.address).map(r => r.address))
+    if (!address.length) {
+        return
+    }
+    if (address.length == 1) {
+        return address[0]
+    }
+    return address
 }
 
-exports.mergeRequests = ({requests, fromBlock, toBlock}, getLogsFn) => {
+exports.mergeRequests = ({requests, fromBlock, toBlock}) => {
     requests = requests
         .filter(r => !toBlock || r.from <= toBlock)
         .filter(r => !r.to || r.to >= fromBlock)
     if (requests.length == 0) {
         // console.log(`no request in range ${fromBlock} +${toBlock-fromBlock}`)
-        return []
+        return
     }
     const address = exports.mergeAddress(requests)
     const topics = exports.mergeTopics(requests.map(r => r.topics))
+    // console.error('mergeRequests', {address, fromBlock, toBlock, topics})
     return {address, fromBlock, toBlock, topics}
 }

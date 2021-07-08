@@ -41,18 +41,20 @@ const createProccesor = ({config, consumers}) => {
             var hasMoreBlock = true
         }
 
-        const logs = await config.getLogs(mergeRequests({requests, fromBlock, toBlock}))
-
-        if (!logs) {
-            return false // failed
+        const merged = mergeRequests({requests, fromBlock, toBlock})
+        if (merged) {
+            const logs = await config.getLogs(merged)
+            if (!logs) {
+                return false // failed
+            }
+    
+            if (!toBlock) {
+                toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
+            }
+        
+            await Bluebird.map(requests, request => request.processLogs({ request, logs, fromBlock, toBlock, lastHead, head }))
         }
 
-        if (!toBlock) {
-            toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
-        }
-    
-        await Bluebird.map(requests, request => request.processLogs({ request, logs, fromBlock, toBlock, lastHead, head }))
-    
         await ConfigModel.updateOne(
             { key: 'lastHead' },
             { value: toBlock },
