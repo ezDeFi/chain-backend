@@ -4,6 +4,13 @@ const ConfigModel = require("../models/ConfigModel")
 const { mergeRequests } = require("../helpers/logs")
 
 const createProccesor = ({config, consumers}) => {
+    // rollback the lastHead
+    // ConfigModel.updateOne(
+    //     { key: 'lastHead' },
+    //     { value: 8000000 },
+    //     { upsert: true },
+    // ).then(console.log).catch(console.error)
+
     const process = async (head) => {
         const maxRange = config.getSize()
     
@@ -31,7 +38,7 @@ const createProccesor = ({config, consumers}) => {
         if (!requests.length) {
             return true
         }
-    
+
         console.log('++++ HEAD', { lastHead, head })
         console.log(requests.map(({key, from, to}) => `\t${key}:\t${from}${to ? ` +${to-from}` : ''}`).join('\n'))
     
@@ -51,7 +58,7 @@ const createProccesor = ({config, consumers}) => {
             if (!toBlock) {
                 toBlock = Math.max(head, ...logs.map(l => l.blockNumber))
             }
-        
+
             await Bluebird.map(requests, request => request.processLogs({ request, logs, fromBlock, toBlock, lastHead, head }))
         }
 
