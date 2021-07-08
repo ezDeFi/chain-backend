@@ -90,7 +90,8 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
             console.log(`accuracy ${accuracy}%`)
             console.log('estimatedGas', gas.toString(), `= ${gas.mul(10000).div(estimatedGas).toNumber()/100}%`)
         })
-
+    })
+    .then(() => {
         process.exit(0);
     })
     .catch(err => {
