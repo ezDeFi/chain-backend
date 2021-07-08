@@ -2,6 +2,7 @@ require('dotenv').config()
 const Bluebird = require('bluebird')
 const { TOKENS } = require('../helpers/constants').bsc
 const swapx = require('../services/swapx')
+const stopwatch = require('../helpers/stopwatch')
 const { ethers } = require('ethers')
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
@@ -45,7 +46,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
 
             const flag = 0x0 // 0x40000
             const flags = new Array(tokens.length-1).fill(flag)
-    
+
             const { data } = await CONTRACTS.swapX.populateTransaction.swapMulti(
                 tokens,
                 amountIn,
@@ -54,7 +55,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
                 flags,
                 trader,
             )
-    
+
             const params = [
                 tokens[0],
                 tokens[tokens.length-1],
@@ -92,6 +93,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         })
     })
     .then(() => {
+        console.log('Database time: ', stopwatch.timelapse(), 'milisecond')
         process.exit(0);
     })
     .catch(err => {

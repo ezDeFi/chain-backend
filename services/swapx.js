@@ -5,6 +5,7 @@ const Bluebird = require('bluebird')
 const ConfigModel = require('../models/ConfigModel')
 const UniswapV2Router01 = require('../ABIs/UniswapV2Router01.json').abi
 const UniswapV2Pair = require('../ABIs/UniswapV2Pair.json').abi
+const stopwatch = require('../helpers/stopwatch')
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 const { ethers } = require('ethers')
@@ -189,7 +190,9 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
             return backward ? [ r1, r0 ] : [ r0, r1 ]
         }
         const key = `pair-Sync-${address}`
-        const reserve = await ConfigModel.findOne(({ key })).lean().then(m => m && m.value)
+        const reserve = await stopwatch.watch(async () => {
+            return await ConfigModel.findOne(({ key })).lean().then(m => m && m.value)
+        })
         if (!reserve) {
             cacheReserves[address] = []
             return []
