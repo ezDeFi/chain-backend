@@ -14,7 +14,16 @@ exports.filterLogs = (logs, request) => {
         }
     }
     if (topics) {
-        logs = logs.filter(log => !topics.some((topic, i) => topic && log.topics[i] !== topic))
+        logs = logs.filter(log => !topics.some((topic, i) => {
+            if (!topic) {
+                return false
+            }
+            if (Array.isArray(topic)) {
+                return topic.includes(log.topics[i])
+            } else {
+                return topic !== log.topics[i]
+            }
+        }))
     }
     return logs
 }
