@@ -190,19 +190,21 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
             return backward ? [ r1, r0 ] : [ r0, r1 ]
         }
         const key = `pair-Sync-${address}`
-        const reserve = await stopwatch.watch(
-            'database',
-            async () => {
-                return await ConfigModel.findOne(({ key })).lean().then(m => m && m.value)
-            }
-        )
+        const reserve = process.env.DATABASE_TIME !== undefined
+            ? await stopwatch.watch(
+                'database',
+                async () => {
+                    return await ConfigModel.findOne(({ key })).lean().then(m => m && m.value)
+                }
+            )
+            : await ConfigModel.findOne(({ key })).lean().then(m => m && m.value)
         if (!reserve) {
             cacheReserves[address] = []
             return []
         }
         const [ r0, r1 ] = reserve.split('/').map(r => bn.from('0x'+r))
 
-        if (process.env.DEBUG) {
+        if (process.env.PROFILING) {
             const contract = new ethers.Contract(address, UniswapV2Pair, getProvider())
             if (contract) {
                 const { _reserve0, _reserve1 } = await contract.callStatic.getReserves()
