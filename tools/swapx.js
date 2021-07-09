@@ -54,7 +54,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         }
 
         console.log('-------- VERIFING --------')
-    
+
         const results = await Bluebird.map(routes, async route => {
             const { tokens, distribution, amountOut, estimatedGas } = route
 
@@ -69,7 +69,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
                 flags,
                 trader,
             )
-
+    
             const params = [
                 tokens[0],
                 tokens[tokens.length-1],
