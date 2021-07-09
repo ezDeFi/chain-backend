@@ -190,9 +190,12 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
             return backward ? [ r1, r0 ] : [ r0, r1 ]
         }
         const key = `pair-Sync-${address}`
-        const reserve = await stopwatch.watch(async () => {
-            return await ConfigModel.findOne(({ key })).lean().then(m => m && m.value)
-        })
+        const reserve = await stopwatch.watch(
+            'database',
+            async () => {
+                return await ConfigModel.findOne(({ key })).lean().then(m => m && m.value)
+            }
+        )
         if (!reserve) {
             cacheReserves[address] = []
             return []

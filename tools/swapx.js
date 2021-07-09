@@ -19,8 +19,21 @@ const CONTRACTS = {
     swapXProxy: new ethers.Contract('0x887907d19360b32744A56B931a022530567Fbcb3', require('../ABIs/SwapXProxy.abi.json'), provider),
 }
 
+function display_execution_time() {
+    stopwatch.stop('main')
+
+    let databaseTime = stopwatch.timelapse('database')
+    let mainTime = stopwatch.timelapse('main')
+    let databaseTimeRatio = databaseTime * 100 / mainTime
+
+    console.log(`Database time: ${databaseTimeRatio.toFixed(2)}% ${databaseTime} miliseconds`)
+    console.log(`Main time: ${mainTime} miliseconds`)
+}
+
 mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(async () => {
+        stopwatch.start('main')
+
         const inputToken = TOKENS.USDT
         const outputToken = TOKENS.CAKE
         const amountIn = '100'+'0'.repeat(18)
@@ -93,7 +106,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         })
     })
     .then(() => {
-        console.log('Database time: ', stopwatch.timelapse(), 'milisecond')
+        display_execution_time()
         process.exit(0);
     })
     .catch(err => {
