@@ -20,26 +20,23 @@ const CONTRACTS = {
 }
 
 function display_execution_time() {
-    stopwatch.stop('main')
-
     let databaseTime = stopwatch.timelapse('database')
-    let mainTime = stopwatch.timelapse('main')
-    let databaseTimeRatio = databaseTime * 100 / mainTime
+    let findPathTime = stopwatch.timelapse('findPath')
+    let databaseTimeRatio = databaseTime * 100 / findPathTime
 
     console.log(`Database time: ${databaseTimeRatio.toFixed(2)}% ${databaseTime} miliseconds`)
-    console.log(`Main time: ${mainTime} miliseconds`)
+    console.log(`findPath time: ${findPathTime} miliseconds`)
 }
 
 mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(async () => {
-        stopwatch.start('main')
-
         const inputToken = TOKENS.USDT
         const outputToken = TOKENS.CAKE
         const amountIn = '100'+'0'.repeat(18)
         const trader = '0xC06F7cF8C9e8a8D39b0dF5A105d66127912Bc980'
         const noms = process.env.NOMS ? process.env.NOMS.split(',').map(n => parseInt(n)) : [0, 1]
 
+        stopwatch.start('findPath')
         const routes = await swapx.findPath({
             inputToken,
             outputToken,
@@ -47,6 +44,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
             trader,
             noms,
         })
+        stopwatch.stop('findPath')
 
         if (!process.env.VERIFY) {
             return
