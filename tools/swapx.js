@@ -54,13 +54,13 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         }
 
         console.log('-------- VERIFING --------')
-
+    
         const results = await Bluebird.map(routes, async route => {
-            const { tokens, distribution, amountOut,  estimatedGas } = route
+            const { tokens, distribution, amountOut, estimatedGas } = route
 
             const flag = 0x0 // 0x40000
             const flags = new Array(tokens.length-1).fill(flag)
-
+    
             const { data } = await CONTRACTS.swapX.populateTransaction.swapMulti(
                 tokens,
                 amountIn,
