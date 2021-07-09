@@ -34,6 +34,10 @@ const DEPOSIT_SIGNS = [
 	'441a3e70', // withdraw(uint256,uint256)
 ]
 
+const APPROVE_SIGNS = [
+	'095ea7b3',	// approve(address,uint256)
+]
+
 exports.state = [
 	async function (req, res) {
 		try {
@@ -131,6 +135,10 @@ exports.query = [
 			} else if (DEPOSIT_SIGNS.includes(funcSign)) {
 				resData.receivingToken = ZERO_ADDRESS
 				// TODO check to is ROUTER_OWNERSHIP_PRESERVED
+			} else if (APPROVE_SIGNS.includes(funcSign)) {
+				const token = ethers.utils.getAddress(to)
+				const spender = ethers.utils.getAddress('0x'+data.substr(10+24, 40))
+				resData.message = `Contract (${spender}) need to be approved to spend token (${token}) by SFarm admins.`
 			} else {
 				console.error(funcSign, txParams)
 				return apiResponse.ErrorResponse(res, 'UNIMPLEMENTED');
