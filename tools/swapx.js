@@ -37,16 +37,14 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         const noms = process.env.NOMS ? process.env.NOMS.split(',').map(n => parseInt(n)) : [0, 1]
 
         const routes = await stopwatch.watch(
-            'findPath',
-            async () => {
-                return await swapx.findPath({
-                    inputToken,
-                    outputToken,
-                    amountIn,
-                    trader,
-                    noms,
-                })
-            }
+            swapx.findPath({
+                inputToken,
+                outputToken,
+                amountIn,
+                trader,
+                noms,
+            }),
+            'findPath'
         )
 
         if (!process.env.VERIFY) {

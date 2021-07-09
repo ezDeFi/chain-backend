@@ -10,7 +10,7 @@
 //  let timelapse = stopwatch.timelapse('database)
 //
 // Example 2
-//  let result = stopwatch.watch('database', async () => {...})
+//  let result = stopwatch.watch(async () => {...}, 'database')
 //  let timelapse = stopwatch.timelapse('database')
 
 // {Map<String, Number>}
@@ -32,9 +32,11 @@ function _validateStopwatchName(name) {
 }
 
 function _validateStopwatchTask(task) {
-    if (typeof task !== 'function') {
-        throw Error('Task is not a function')
+    if (typeof task === 'function' || task instanceof Promise) {
+        return
     }
+
+    throw Error('Task is not a function or promise')
 }
 
 // Descriptions
@@ -43,22 +45,22 @@ function _validateStopwatchTask(task) {
 //
 // Input
 //  * name {String} Name of stopwatch.
-//  * task {Function | Promise} Thing to execute.
+//  * task {Function | Promise} Task to execute.
 //
 // Output {Any} Result of `task()`
 //
 // Errors
-//  * Error `Name is not a string`
 //  * Error `Task is not a function`
-async function watch(name, task) {
-    _validateStopwatchName(name)
+//  * Error `Name is not a string`
+async function watch(task, name) {
     _validateStopwatchTask(task)
+    _validateStopwatchName(name)
 
     let currentTimelapse = _timelapse_map.get(name) || 0
     let begin = Date.now()
-    let result = await Promise.resolve(
-        task()
-    )
+    let result = (typeof task === 'function')
+        ? await task()
+        : await task
     let end = Date.now()
     let timelapse = currentTimelapse + (end - begin)
 
