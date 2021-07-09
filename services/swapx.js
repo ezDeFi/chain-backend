@@ -204,7 +204,7 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
         }
         const [ r0, r1 ] = reserve.split('/').map(r => bn.from('0x'+r))
 
-        if (process.env.PROFILING) {
+        if (process.env.DEBUG) {
             const contract = new ethers.Contract(address, UniswapV2Pair, getProvider())
             if (contract) {
                 const { _reserve0, _reserve1 } = await contract.callStatic.getReserves()
