@@ -103,7 +103,11 @@ exports.withdrawChainCmds = async (token, amount, from, verify) => {
                     if (process.env.DEBUG) console.debug({userLiquidity: userLiquidity.toString()})
                     if (liquidityMissing.lte(userLiquidity)) {
                         if (verify) {
-                            await pcFarmService.contract.callStatic.withdraw(pID, liquidityMissing, { from: sfarmAddress })
+                            try {
+                                await pcFarmService.contract.callStatic.withdraw(pID, liquidityMissing, { from: sfarmAddress })
+                            } catch(err) {
+                                console.error('farm.withdraw', err)
+                            }
                         }
                         const tx = await pcFarmService.contract.populateTransaction.withdraw(pID, liquidityMissing, { from: sfarmAddress })
                         rls.push({
@@ -124,8 +128,24 @@ exports.withdrawChainCmds = async (token, amount, from, verify) => {
 
             const router = new ethers.Contract(ROUTERS[dex], abiRouter, provider)
 
-            if (verify && rls.length == 0) {
-                await router.callStatic.removeLiquidity(token, t, liquidityNeed, 0, 0, sfarmAddress, LARGE_VALUE, { from: sfarmAddress })
+            if (verify) {
+                if (Number(verify) > 1) {
+                    try {
+                        const allowance = await pair.callStatic.allowance(sfarmAddress, ROUTERS[dex])
+                        if (allowance.lte(0)) {
+                            console.error(`No allowance for ${dex} (${ROUTERS[dex]}) to spend ${pairAddress} of SFarm (${sfarmAddress})`)
+                        }
+                    } catch(err) {
+                        console.error(`${pairAddress}.allowance(${sfarmAddress}, ${ROUTERS[dex]})`, err)
+                    }
+                }
+                if (rls.length == 0) {
+                    try {
+                        await router.callStatic.removeLiquidity(token, t, liquidityNeed, 0, 0, sfarmAddress, LARGE_VALUE, { from: sfarmAddress })
+                    } catch(err) {
+                        console.error(`${dex}.removeLiquidity(${token}, ${t}) => ${pairAddress}`, err)
+                    }
+                }
             }
             const tx = await router.populateTransaction.removeLiquidity(token, t, liquidityNeed, 0, 0, sfarmAddress, LARGE_VALUE, { from: sfarmAddress })
             rls.push({
@@ -149,7 +169,11 @@ exports.withdrawChainCmds = async (token, amount, from, verify) => {
             }
 
             if (verify) {
-                await SFarm.callStatic.withdraw(token, amount, rls, { from })
+                try {
+                    await SFarm.callStatic.withdraw(token, amount, rls, { from })
+                } catch(err) {
+                    console.error(`SFarm.withdraw(${token})`, rls, err)
+                }
             }
 
             return rls
@@ -157,7 +181,11 @@ exports.withdrawChainCmds = async (token, amount, from, verify) => {
     }
 
     if (verify) {
-        await SFarm.callStatic.withdraw(token, amount, [], { from })
+        try {
+            await SFarm.callStatic.withdraw(token, amount, [], { from })
+        } catch(err) {
+            console.error(`SFarm.withdraw(${token})`, err)
+        }
     }
     return []
 }
