@@ -138,7 +138,7 @@ exports.query = [
 			} else if (APPROVE_SIGNS.includes(funcSign)) {
 				const token = ethers.utils.getAddress(to)
 				const spender = ethers.utils.getAddress('0x'+data.substr(10+24, 40))
-				resData.message = `Contract (${spender}) need to be approved to spend token (${token}) by SFarm admins.`
+				return apiResponse.ErrorResponse(res, `Contract (${spender}) need to be approved to spend token (${token}) by SFarm admins.`);
 			} else {
 				console.error(funcSign, txParams)
 				return apiResponse.ErrorResponse(res, 'UNIMPLEMENTED');
