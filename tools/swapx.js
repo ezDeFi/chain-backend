@@ -2,6 +2,7 @@ require('dotenv').config()
 const Bluebird = require('bluebird')
 const { TOKENS } = require('../helpers/constants').bsc
 const swapx = require('../services/swapx')
+const stopwatch = require('../helpers/stopwatch')
 const { ethers } = require('ethers')
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
@@ -18,6 +19,19 @@ const CONTRACTS = {
     swapXProxy: new ethers.Contract('0x887907d19360b32744A56B931a022530567Fbcb3', require('../ABIs/SwapXProxy.abi.json'), provider),
 }
 
+function displayExecutionTime() {
+    if (!process.env.STOPWATCH) {
+        return
+    }
+
+    let databaseTime = stopwatch.timelapse('database')
+    let findPathTime = stopwatch.timelapse('findPath')
+    let databaseTimeRatio = databaseTime * 100 / findPathTime
+
+    console.log(`Database time: ${databaseTimeRatio.toFixed(2)}% ${databaseTime} miliseconds`)
+    console.log(`findPath time: ${findPathTime} miliseconds`)
+}
+
 mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(async () => {
         const inputToken = TOKENS.USDT
@@ -26,13 +40,16 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         const trader = '0xC06F7cF8C9e8a8D39b0dF5A105d66127912Bc980'
         const noms = process.env.NOMS ? process.env.NOMS.split(',').map(n => parseInt(n)) : [0, 1]
 
-        const routes = await swapx.findPath({
-            inputToken,
-            outputToken,
-            amountIn,
-            trader,
-            noms,
-        })
+        const routes = await stopwatch.watch(
+            swapx.findPath({
+                inputToken,
+                outputToken,
+                amountIn,
+                trader,
+                noms,
+            }),
+            'findPath'
+        )
 
         if (!process.env.VERIFY) {
             return
@@ -92,6 +109,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         })
     })
     .then(() => {
+        displayExecutionTime()
         process.exit(0);
     })
     .catch(err => {
