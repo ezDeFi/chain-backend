@@ -110,7 +110,6 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
     })
     .then(() => {
         displayExecutionTime()
-
         process.exit(0);
     })
     .catch(err => {
