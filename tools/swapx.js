@@ -105,7 +105,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         })
     })
     .then(() => {
-        if (process.env.DATABASE_TIME) {
+        if (process.env.STOPWATCH) {
             displayExecutionTime()
         }
 

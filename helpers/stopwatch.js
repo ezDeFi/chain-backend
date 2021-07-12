@@ -21,8 +21,9 @@ let _timelapse_map = new Map()
 
 // {Map<String, Nunber}
 //
-// Map of start stopwatche's time. Key is stopwatch's name and value is start time.
-// This is use by `start()` and `stop()` to measure fragmention of time.
+// Map of start stopwatche's time. Key is stopwatch's name and value is start
+// time.  This is use by `start()` and `stop()` to measure fragmention of
+// time.
 let _timestart_map = new Map()
 
 function _validateStopwatchName(name) {
@@ -31,17 +32,10 @@ function _validateStopwatchName(name) {
     }
 }
 
-function _validateStopwatchTask(task) {
-    if (typeof task === 'function' || task instanceof Promise) {
-        return
-    }
-
-    throw Error('Task is not a function or promise')
-}
-
 // Descriptions
 //  * Perform task and return it's result.
 //  * Execution time of task is add to total timelapse.
+//  * Specify environment variable `STOPWATCH=1` to enable measurement.
 //
 // Input
 //  * name {String} Name of stopwatch.
@@ -53,14 +47,15 @@ function _validateStopwatchTask(task) {
 //  * Error `Task is not a function`
 //  * Error `Name is not a string`
 async function watch(task, name) {
-    _validateStopwatchTask(task)
+    if (!process.env.STOPWATCH) {
+        return await _executeTask(task)
+    }
+
     _validateStopwatchName(name)
 
     let currentTimelapse = _timelapse_map.get(name) || 0
     let begin = Date.now()
-    let result = (typeof task === 'function')
-        ? await task()
-        : await task
+    let result = await _executeTask(task)
     let end = Date.now()
     let timelapse = currentTimelapse + (end - begin)
 
@@ -137,6 +132,28 @@ function timelapse(name) {
     _validateStopwatchName(name)
 
     return _timelapse_map.get(name)
+}
+
+// Descriptions
+//  * Perform a task and return it's result.
+//
+// Input
+//  * task {Function | Promise}
+//
+// Output {any} Result of task.
+//
+// Errors
+//  * Error `Task is not a function or promise`
+async function _executeTask(task) {
+    if (typeof task === 'function') {
+        return await task()
+    }
+    else if (task instanceof Promise) {
+        return await task
+    }
+    else {
+        throw Error('Task is not a function or promise')
+    }
 }
 
 module.exports = {
