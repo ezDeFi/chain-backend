@@ -47,11 +47,11 @@ function _validateStopwatchName(name) {
 //  * Error `Task is not a function`
 //  * Error `Name is not a string`
 async function watch(task, name) {
+    _validateStopwatchName(name)
+
     if (!process.env.STOPWATCH) {
         return await _executeTask(task)
     }
-
-    _validateStopwatchName(name)
 
     let currentTimelapse = _timelapse_map.get(name) || 0
     let begin = Date.now()
