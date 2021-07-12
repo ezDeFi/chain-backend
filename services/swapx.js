@@ -192,7 +192,7 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
         const key = `pair-Sync-${address}`
         const reserve = await stopwatch.watch(
             ConfigModel.findOne(({ key })).lean().then(m => m && m.value),
-            'database'
+            'database',
         )
         if (!reserve) {
             cacheReserves[address] = []

@@ -20,6 +20,10 @@ const CONTRACTS = {
 }
 
 function displayExecutionTime() {
+    if (!process.env.STOPWATCH) {
+        return
+    }
+
     let databaseTime = stopwatch.timelapse('database')
     let findPathTime = stopwatch.timelapse('findPath')
     let databaseTimeRatio = databaseTime * 100 / findPathTime
@@ -105,9 +109,7 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         })
     })
     .then(() => {
-        if (process.env.STOPWATCH) {
-            displayExecutionTime()
-        }
+        displayExecutionTime()
 
         process.exit(0);
     })
