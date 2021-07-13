@@ -20,7 +20,7 @@ const {
 } = require('./lib')
 const LogsStateModel = require('../models/LogsStateModel')
 
-describe('consumer/pc-usdt-busd: on genesis blockchain network', () => {
+describe.skip('consumer/pc-usdt-busd: on genesis blockchain network', () => {
     let worker
     let ethersProvider
     let key = 'pc-usdt-busd'

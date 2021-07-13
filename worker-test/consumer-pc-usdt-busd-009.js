@@ -25,7 +25,7 @@ const {
     loadConsumer,
 } = require('./lib')
 
-describe('consumer/pc-usdt-busd: loop of past processor find out lastest sync log', () => {
+describe.skip('consumer/pc-usdt-busd: loop of past processor find out lastest sync log', () => {
     let pastProcessor
     let headProcessor
     let ethersProvider

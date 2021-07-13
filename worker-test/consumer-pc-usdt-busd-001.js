@@ -21,7 +21,7 @@ const {
 } = require('./lib')
 const LogsStateModel = require('../models/LogsStateModel')
 
-describe('consumer/pc-usdt-busd: succeed with few blocks', () => {
+describe.skip('consumer/pc-usdt-busd: succeed with few blocks', () => {
     let worker
     let consumers
     let ethersProvider

@@ -12,7 +12,7 @@ function loadConsumers(relativePaths) {
         throw Error('Invalid consumer path')
     }
 
-    let rootDir = path.join(__dirname, '..', '..')
+    let rootDir = path.join(__dirname, '..')
 
     return relativePaths
         .map(relativePath => {
