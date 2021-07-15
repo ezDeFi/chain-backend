@@ -8,7 +8,7 @@ const Bluebird = require('bluebird')
 module.exports = (key) => {
     // reset the state
     // require('../models/LogsStateModel').deleteOne({ key }).then(console.error).catch(console.error)
-    // ConfigModel.deleteMany({ key: /^pair-Sync-.*/ }).then(console.error).catch(console.error)
+    // ConfigModel.deleteMany({ key: new RegExp(`^${key}-.*`) }).then(console.error).catch(console.error)
 
     const pair = new ethers.Contract(ZERO_ADDRESS, contractABI)
     const filter = pair.filters.Sync(null, null)
