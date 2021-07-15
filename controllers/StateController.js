@@ -3,6 +3,7 @@ const apiResponse = require("../helpers/apiResponse");
 const LogsStateModel = require('../models/LogsStateModel')
 const ConfigModel = require('../models/ConfigModel')
 var mongoose = require("mongoose");
+const Bluebird = require('bluebird');
 mongoose.set("useFindAndModify", false);
 
 exports.query = [
@@ -23,7 +24,11 @@ exports.query = [
 				var keys = key.split(',')
 			}
 
-			const states = await ConfigModel.find({ key: { $in: keys } }).lean()
+			const states = await Bluebird.all([
+				LogsStateModel.find({ key: { $in: keys } }).lean(),
+				ConfigModel.find({ key: { $in: keys } }).lean(),
+			]).then(_.flatten)
+
 			const ret = states
 				.filter(s => !!s)
 				.reduce((res, s, i) => ({...res, [s.key]: s.value}), {})
