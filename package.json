@@ -42,7 +42,7 @@
     "eslint": "^6.5.1",
     "kill-port": "^1.6.1",
     "mocha": "^6.2.2",
-    "mongodb-memory-server": "^6.9.6",
+    "mongodb-memory-server": "5.2.11",
     "nodemon": "^1.19.4",
     "nyc": "^14.1.1"
   }
