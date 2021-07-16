@@ -160,7 +160,19 @@ function hopsGas(hops) {
     return hops * 120000
 }
 
-async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPrice, gasToken }) {
+const cacheState = {}
+async function getStateDB(key) {
+    if (cacheState.hasOwnProperty(key)) {
+        return cacheState[key]
+    }
+    const value = await stopwatch.watch(
+        ConfigModel.findOne(({ key })).lean().then(m => m && m.value),
+        'database',
+    )
+    return cacheState[key] = value
+}
+
+async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPrice, gasToken, getState }) {
     inputToken = ethers.utils.getAddress(inputToken)
     if (inputToken == TOKENS.BNB) {
         inputToken = TOKENS.WBNB
@@ -175,6 +187,10 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
     gasPrice = bn.from(gasPrice || '5'+'0'.repeat(9))
     gasToken = ethers.utils.getAddress(gasToken || TOKENS.WBNB)
 
+    if (!getState) {
+        getState = getStateDB
+    }
+
     function findPair(swap, inputToken, outputToken) {
         return {
             address: ethers.utils.getAddress(bscUtil.findPair(swap, inputToken, outputToken)),
@@ -182,38 +198,30 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
         }
     }
 
-    const cacheReserves = {}
+    const cacheAccuracy = {}
     async function getReserves(swap, inputToken, outputToken) {
         const { address, backward } = await findPair(swap, inputToken, outputToken)
-        if (cacheReserves[address]) {
-            const [ r0, r1 ] = cacheReserves[address]
-            return backward ? [ r1, r0 ] : [ r0, r1 ]
-        }
         const key = `pair-Sync-${address}`
-        const reserve = await stopwatch.watch(
-            ConfigModel.findOne(({ key })).lean().then(m => m && m.value),
-            'database',
-        )
+        const reserve = await getState(key)
         if (!reserve) {
-            cacheReserves[address] = []
             return []
         }
         const [ r0, r1 ] = reserve.split('/').map(r => bn.from('0x'+r))
 
-        if (process.env.DEBUG) {
+        if (process.env.DEBUG && !cacheAccuracy.hasOwnProperty(address)) {
             const contract = new ethers.Contract(address, UniswapV2Pair, getProvider())
             if (contract) {
                 const { _reserve0, _reserve1 } = await contract.callStatic.getReserves()
                 const a = r0.mul(_reserve1)
                 const b = r1.mul(_reserve0)
                 const acc = a.mul(1000).div(b).sub(1000).toNumber()/10
+                cacheAccuracy[address] = acc
                 if (acc < -0.1 || acc > 0.1) {
                     console.error(`Reserve accurracy: ${acc}% ${swap} ${inputToken} ${outputToken}`)
                 }
             }
         }
 
-        cacheReserves[address] = [ r0, r1 ]
         return backward ? [ r1, r0 ] : [ r0, r1 ]
     }
 
