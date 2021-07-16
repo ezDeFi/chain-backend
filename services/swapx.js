@@ -9,7 +9,7 @@ const stopwatch = require('../helpers/stopwatch')
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 const { ethers } = require('ethers')
-const bn = ethers.BigNumber
+const bn = ethers.BigNumber.from
 const bscUtil = require('bsc_util')
 
 var provider
@@ -103,9 +103,9 @@ async function getAmountOutByReserves(swap, amountIn, reserveIn, reserveOut) {
         return 0
     }
     const fee10000 = FEE10000[swap]
-    const amountInWithFee = bn.from(10000).sub(fee10000).mul(amountIn)
+    const amountInWithFee = bn(10000).sub(fee10000).mul(amountIn)
     const numerator = amountInWithFee.mul(reserveOut)
-    const denominator = bn.from(reserveIn).mul(10000).add(amountInWithFee)
+    const denominator = bn(reserveIn).mul(10000).add(amountInWithFee)
     const amountOut = numerator.div(denominator)
     if (process.env.DEBUG) {
         const contract = getRouterContract(swap)
@@ -173,7 +173,7 @@ async function getStateDB(key) {
 }
 
 function createSwapContext({gasPrice, gasToken, getState}) {
-    gasPrice = bn.from(gasPrice || '5'+'0'.repeat(9))
+    gasPrice = bn(gasPrice || '5'+'0'.repeat(9))
     gasToken = ethers.utils.getAddress(gasToken || TOKENS.WBNB)
     getState = getState || getStateDB
 
@@ -192,7 +192,7 @@ function createSwapContext({gasPrice, gasToken, getState}) {
         if (!reserve) {
             return []
         }
-        const [ r0, r1 ] = reserve.split('/').map(r => bn.from('0x'+r))
+        const [ r0, r1 ] = reserve.split('/').map(r => bn('0x'+r))
     
         if (process.env.DEBUG && !cacheAccuracy.hasOwnProperty(address)) {
             const contract = new ethers.Contract(address, UniswapV2Pair, getProvider())
@@ -236,7 +236,7 @@ function createSwapContext({gasPrice, gasToken, getState}) {
         if (outputToken == TOKENS.BNB) {
             outputToken = TOKENS.WBNB
         }
-        amountIn = bn.from(amountIn)
+        amountIn = bn(amountIn)
         trader = ethers.utils.getAddress(trader || ZERO_ADDRESS)
         noms = noms == null ? [0, 1] : noms
     
@@ -317,7 +317,7 @@ function createSwapContext({gasPrice, gasToken, getState}) {
                         return total
                     }
                     return total.add(out.amountOut)
-                }, bn.from(0))
+                }, bn(0))
             }
     
             function sumOutSubFee(outs) {
@@ -326,7 +326,7 @@ function createSwapContext({gasPrice, gasToken, getState}) {
                         return total
                     }
                     return total.add(amountOutSubFee(out))
-                }, bn.from(0))
+                }, bn(0))
             }
     
             const zeroOutput = s => (!s || !s.amountOut || s.amountOut.isZero())
@@ -403,7 +403,7 @@ function createSwapContext({gasPrice, gasToken, getState}) {
                 throw new Error('nom out of range: ' + nom)
             }
             const best = {
-                amount: bn.from(0),
+                amount: bn(0),
                 distribution: [],
                 path: [],
                 pathRoutes: [],
@@ -415,7 +415,7 @@ function createSwapContext({gasPrice, gasToken, getState}) {
                 }
                 const tokens = [inputToken, ...mids, outputToken]
     
-                let pathAmountOut = bn.from(amountIn)
+                let pathAmountOut = bn(amountIn)
                 const distribution = new Array(DEXES.length).fill('')
                 const dexes = []
                 for (let i = 1; i < tokens.length; ++i) {
