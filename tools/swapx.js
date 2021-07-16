@@ -39,9 +39,10 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
         const amountIn = '100'+'0'.repeat(18)
         const trader = '0xC06F7cF8C9e8a8D39b0dF5A105d66127912Bc980'
         const noms = process.env.NOMS ? process.env.NOMS.split(',').map(n => parseInt(n)) : [0, 1]
+        const context = swapx.createSwapContext({})
 
         const routes = await stopwatch.watch(
-            swapx.findPath({
+            context.findPath({
                 inputToken,
                 outputToken,
                 amountIn,

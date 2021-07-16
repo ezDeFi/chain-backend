@@ -8,7 +8,8 @@ exports.find = [
 			const { trader, gasPrice, gasToken } = req.query
 			const noms = req.query.noms.split(',').map(nom => parseInt(nom))
 
-			const routes = await swapx.findPath({ inputToken, outputToken, amountIn, trader, noms, gasPrice, gasToken})
+			const context = swapx.createSwapContext({ gasPrice, gasToken })
+			const routes = await context.findPath({ inputToken, outputToken, amountIn, trader, noms })
 
 			return apiResponse.successResponseWithData(res, "Operation success", routes);
 		} catch (err) {

@@ -172,24 +172,10 @@ async function getStateDB(key) {
     return cacheState[key] = value
 }
 
-async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPrice, gasToken, getState }) {
-    inputToken = ethers.utils.getAddress(inputToken)
-    if (inputToken == TOKENS.BNB) {
-        inputToken = TOKENS.WBNB
-    }
-    outputToken = ethers.utils.getAddress(outputToken)
-    if (outputToken == TOKENS.BNB) {
-        outputToken = TOKENS.WBNB
-    }
-    amountIn = bn.from(amountIn)
-    trader = ethers.utils.getAddress(trader || ZERO_ADDRESS)
-    noms = noms == null ? [0, 1] : noms
+function createSwapContext({gasPrice, gasToken, getState}) {
     gasPrice = bn.from(gasPrice || '5'+'0'.repeat(9))
     gasToken = ethers.utils.getAddress(gasToken || TOKENS.WBNB)
-
-    if (!getState) {
-        getState = getStateDB
-    }
+    getState = getState || getStateDB
 
     function findPair(swap, inputToken, outputToken) {
         return {
@@ -207,7 +193,7 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
             return []
         }
         const [ r0, r1 ] = reserve.split('/').map(r => bn.from('0x'+r))
-
+    
         if (process.env.DEBUG && !cacheAccuracy.hasOwnProperty(address)) {
             const contract = new ethers.Contract(address, UniswapV2Pair, getProvider())
             if (contract) {
@@ -221,10 +207,10 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
                 }
             }
         }
-
+    
         return backward ? [ r1, r0 ] : [ r0, r1 ]
     }
-
+    
     async function getAmountOut(swap, inputToken, outputToken, amountIn) {
         if (!ROUTERS.hasOwnProperty(swap)) {
             return 0
@@ -241,243 +227,262 @@ async function findPath({ inputToken, outputToken, amountIn, trader, noms, gasPr
         return amountOut
     }
 
-    let _cacheGasRoute
-    async function getGasAsToken(token, wei) {
-        if (token == gasToken) {
-            return wei
+    async function findPath ({ inputToken, outputToken, amountIn, trader, noms }) {
+        inputToken = ethers.utils.getAddress(inputToken)
+        if (inputToken == TOKENS.BNB) {
+            inputToken = TOKENS.WBNB
         }
-        if (_cacheGasRoute) {
-            const { swap, path } = _cacheGasRoute
-            const amountOut = await getRouteAmountOut(swap, path, wei)
-            if (amountOut && !amountOut.isZero()) {
-                return amountOut
+        outputToken = ethers.utils.getAddress(outputToken)
+        if (outputToken == TOKENS.BNB) {
+            outputToken = TOKENS.WBNB
+        }
+        amountIn = bn.from(amountIn)
+        trader = ethers.utils.getAddress(trader || ZERO_ADDRESS)
+        noms = noms == null ? [0, 1] : noms
+    
+        let _cacheGasRoute
+        async function getGasAsToken(token, wei) {
+            if (token == gasToken) {
+                return wei
             }
-        }
-        for (const mids_nom of MULTI_MIDS) {
-            for (const mids of mids_nom) {
-                if (gasToken == mids[0] || mids[mids.length-1] == token) {
-                    continue
+            if (_cacheGasRoute) {
+                const { swap, path } = _cacheGasRoute
+                const amountOut = await getRouteAmountOut(swap, path, wei)
+                if (amountOut && !amountOut.isZero()) {
+                    return amountOut
                 }
-                const path = [gasToken, ...mids, token]
-
-                for (const swap in ROUTERS) {
-                    const amountOut = await getRouteAmountOut(swap, path, wei)
-                    if (amountOut && !amountOut.isZero()) {
-                        _cacheGasRoute = { swap, path }
-                        return amountOut
+            }
+            for (const mids_nom of MULTI_MIDS) {
+                for (const mids of mids_nom) {
+                    if (gasToken == mids[0] || mids[mids.length-1] == token) {
+                        continue
+                    }
+                    const path = [gasToken, ...mids, token]
+    
+                    for (const swap in ROUTERS) {
+                        const amountOut = await getRouteAmountOut(swap, path, wei)
+                        if (amountOut && !amountOut.isZero()) {
+                            _cacheGasRoute = { swap, path }
+                            return amountOut
+                        }
                     }
                 }
             }
         }
-    }
-
-    async function getRouteAmountOut(swap, path, amount) {
-        for (let i = 1; i < path.length; ++i) {
-            if (!amount || amount.isZero()) {
-                return
-            }
-            amount = await getAmountOut(swap, path[i-1], path[i], amount)
-        }
-        return amount
-    }
-
-    function getRouteAmountOuts(inputToken, outputToken, amount, chunks) {
-        const total = sum(chunks)
-        return Bluebird.map(DEXES, async ({swap, mid}, i, n) => {
-            if (!chunks[i]) return
-            const amountIn = amount.mul(chunks[i]).div(total)
-            if (!amountIn || amountIn.isZero()) {
-                return
-            }
-            let path = [inputToken, outputToken]
-            if (mid) {
-                if (path.includes(mid)) {
+    
+        async function getRouteAmountOut(swap, path, amount) {
+            for (let i = 1; i < path.length; ++i) {
+                if (!amount || amount.isZero()) {
                     return
                 }
-                path = [inputToken, mid, outputToken]
+                amount = await getAmountOut(swap, path[i-1], path[i], amount)
             }
-            const amountOut = await getRouteAmountOut(swap, path, amountIn)
-            if (!amountOut || amountOut.isZero()) {
-                return
-            }
-            return { swap, amountOut, mid }
-        })
-    }
-
-    const midFee = await getGasAsToken(outputToken, gasPrice.mul(hopsGas(1)))
-    console.log({midFee: midFee.toString()})
-
-    async function getBestDistribution(inputToken, outputToken, amountIn) {
-        function amountOutSubFee(out) {
-            return out.mid ? out.amountOut.sub(midFee) : out.amountOut
+            return amount
         }
-
-        function sumOut(outs) {
-            return outs.reduce((total, out) => {
-                if (!out || !out.amountOut || out.amountOut.isZero()) {
-                    return total
+    
+        function getRouteAmountOuts(inputToken, outputToken, amount, chunks) {
+            const total = sum(chunks)
+            return Bluebird.map(DEXES, async ({swap, mid}, i, n) => {
+                if (!chunks[i]) return
+                const amountIn = amount.mul(chunks[i]).div(total)
+                if (!amountIn || amountIn.isZero()) {
+                    return
                 }
-                return total.add(out.amountOut)
-            }, bn.from(0))
-        }
-
-        function sumOutSubFee(outs) {
-            return outs.reduce((total, out) => {
-                if (!out || !out.amountOut || out.amountOut.isZero()) {
-                    return total
+                let path = [inputToken, outputToken]
+                if (mid) {
+                    if (path.includes(mid)) {
+                        return
+                    }
+                    path = [inputToken, mid, outputToken]
                 }
-                return total.add(amountOutSubFee(out))
-            }, bn.from(0))
-        }
-
-        const zeroOutput = s => (!s || !s.amountOut || s.amountOut.isZero())
-
-        // weed out all failed chunks
-        async function clearFailedChunks(chunks) {
-            let outs
-            while (true) {
-                outs = await getRouteAmountOuts(inputToken, outputToken, amountIn, chunks)
-                const hasFailedChunks = outs.some((out, i) => chunks[i] && zeroOutput(out))
-                if (!hasFailedChunks) {
-                    return [ chunks, outs ]
+                const amountOut = await getRouteAmountOut(swap, path, amountIn)
+                if (!amountOut || amountOut.isZero()) {
+                    return
                 }
-                chunks = chunks.map((c, ci) => c && zeroOutput(outs[ci]) ? c >> 1 : c)
-                if (!chunks.some(c => c)) {
-                    return []  // all chunks is cleared but no success
+                return { swap, amountOut, mid }
+            })
+        }
+    
+        const midFee = await getGasAsToken(outputToken, gasPrice.mul(hopsGas(1)))
+        console.log({midFee: midFee.toString()})
+    
+        async function getBestDistribution(inputToken, outputToken, amountIn) {
+            function amountOutSubFee(out) {
+                return out.mid ? out.amountOut.sub(midFee) : out.amountOut
+            }
+    
+            function sumOut(outs) {
+                return outs.reduce((total, out) => {
+                    if (!out || !out.amountOut || out.amountOut.isZero()) {
+                        return total
+                    }
+                    return total.add(out.amountOut)
+                }, bn.from(0))
+            }
+    
+            function sumOutSubFee(outs) {
+                return outs.reduce((total, out) => {
+                    if (!out || !out.amountOut || out.amountOut.isZero()) {
+                        return total
+                    }
+                    return total.add(amountOutSubFee(out))
+                }, bn.from(0))
+            }
+    
+            const zeroOutput = s => (!s || !s.amountOut || s.amountOut.isZero())
+    
+            // weed out all failed chunks
+            async function clearFailedChunks(chunks) {
+                let outs
+                while (true) {
+                    outs = await getRouteAmountOuts(inputToken, outputToken, amountIn, chunks)
+                    const hasFailedChunks = outs.some((out, i) => chunks[i] && zeroOutput(out))
+                    if (!hasFailedChunks) {
+                        return [ chunks, outs ]
+                    }
+                    chunks = chunks.map((c, ci) => c && zeroOutput(outs[ci]) ? c >> 1 : c)
+                    if (!chunks.some(c => c)) {
+                        return []  // all chunks is cleared but no success
+                    }
+                    // console.error(chunks)
                 }
-                // console.error(chunks)
             }
-        }
-
-        let [ chunks, outs ] = await clearFailedChunks(new Array(DEXES.length).fill(128))
-        if (!chunks) {
-            return []
-        }
-
-        for (let _no_use_ = 0; _no_use_ < 64; ++_no_use_) {
-            let matrix = [ ]
-            // TODO: reduce by priority and last amountOut
-            for (let i in chunks) {
-                if (!chunks[i]) {
-                    continue
+    
+            let [ chunks, outs ] = await clearFailedChunks(new Array(DEXES.length).fill(128))
+            if (!chunks) {
+                return []
+            }
+    
+            for (let _no_use_ = 0; _no_use_ < 64; ++_no_use_) {
+                let matrix = [ ]
+                // TODO: reduce by priority and last amountOut
+                for (let i in chunks) {
+                    if (!chunks[i]) {
+                        continue
+                    }
+                    const removedOneChunks = [...chunks]
+                    removedOneChunks[i] = 0
+                    matrix.push(removedOneChunks)
+                    const halfOneChunks = [...chunks]
+                    halfOneChunks[i] >>= 1
+                    matrix.push(halfOneChunks)
                 }
-                const removedOneChunks = [...chunks]
-                removedOneChunks[i] = 0
-                matrix.push(removedOneChunks)
-                const halfOneChunks = [...chunks]
-                halfOneChunks[i] >>= 1
-                matrix.push(halfOneChunks)
-            }
-            if (matrix.length == 0) {
-                break
-            }
-
-            const matrixOuts = await Bluebird.map(matrix, chunks => getRouteAmountOuts(inputToken, outputToken, amountIn, chunks))
-
-            // const matrixSumOut = matrixOuts.map(outs => sumOut(outs))
-
-            // insert the previous outs to the end of the array
-            const matrixSumOutSubFee = [...matrixOuts, outs].map(outs => sumOutSubFee(outs))
-            // console.error(matrixSumOutSubFee.map(s => s.toString()))
-
-            const bestIndex = matrixSumOutSubFee.reduce((bestIndex, v, i) => v.gt(matrixSumOutSubFee[bestIndex]) ? i : bestIndex, 0)
-            if (bestIndex == matrix.length) {
-                break   // the last item in the array is the last success outs
-            }
-
-            chunks = matrix[bestIndex]
-            outs = matrixOuts[bestIndex]
-            // console.error(chunks, bestIndex)
-        }
-
-        const amountOut = sumOut(outs)
-        // console.error({amountOut: amountOut.toString()})
-
-        // console.error(chunks, outs.filter(out => out))
-        return [ amountOut, chunks, outs.filter(out => out) ]
-    }
-
-    return await Bluebird.map(noms, findBest).filter(best => best)
-
-    async function findBest(nom) {
-        if (nom >= MULTI_MIDS.length) {
-            throw new Error('nom out of range: ' + nom)
-        }
-        const best = {
-            amount: bn.from(0),
-            distribution: [],
-            path: [],
-            pathRoutes: [],
-        }
-
-        for (const mids of MULTI_MIDS[nom]) {
-            if (inputToken == mids[0] || mids[mids.length-1] == outputToken) {
-                continue
-            }
-            const tokens = [inputToken, ...mids, outputToken]
-
-            let pathAmountOut = bn.from(amountIn)
-            const distribution = new Array(DEXES.length).fill('')
-            const dexes = []
-            for (let i = 1; i < tokens.length; ++i) {
-                const [ amountOut, dist, routes ] = await getBestDistribution(tokens[i-1], tokens[i], pathAmountOut)
-                if (!amountOut) {
+                if (matrix.length == 0) {
                     break
                 }
-
-                for (let j = 0; j < distribution.length; ++j) {
-                    distribution[j] = dist[j] + (distribution[j] << 8)
+    
+                const matrixOuts = await Bluebird.map(matrix, chunks => getRouteAmountOuts(inputToken, outputToken, amountIn, chunks))
+    
+                // const matrixSumOut = matrixOuts.map(outs => sumOut(outs))
+    
+                // insert the previous outs to the end of the array
+                const matrixSumOutSubFee = [...matrixOuts, outs].map(outs => sumOutSubFee(outs))
+                // console.error(matrixSumOutSubFee.map(s => s.toString()))
+    
+                const bestIndex = matrixSumOutSubFee.reduce((bestIndex, v, i) => v.gt(matrixSumOutSubFee[bestIndex]) ? i : bestIndex, 0)
+                if (bestIndex == matrix.length) {
+                    break   // the last item in the array is the last success outs
                 }
-
-                dexes.push(routes)
-                pathAmountOut = amountOut
+    
+                chunks = matrix[bestIndex]
+                outs = matrixOuts[bestIndex]
+                // console.error(chunks, bestIndex)
             }
-            // console.error({amountOut, distribution, tokens})
-            if (pathAmountOut.gt(best.amount)) {
-                // console.error(amountOut.toString())
-                best.amount = pathAmountOut
-                best.distribution = distribution
-                best.path = tokens
-                best.pathRoutes = dexes
+    
+            const amountOut = sumOut(outs)
+            // console.error({amountOut: amountOut.toString()})
+    
+            // console.error(chunks, outs.filter(out => out))
+            return [ amountOut, chunks, outs.filter(out => out) ]
+        }
+    
+        return await Bluebird.map(noms, findBest).filter(best => best)
+    
+        async function findBest(nom) {
+            if (nom >= MULTI_MIDS.length) {
+                throw new Error('nom out of range: ' + nom)
+            }
+            const best = {
+                amount: bn.from(0),
+                distribution: [],
+                path: [],
+                pathRoutes: [],
+            }
+    
+            for (const mids of MULTI_MIDS[nom]) {
+                if (inputToken == mids[0] || mids[mids.length-1] == outputToken) {
+                    continue
+                }
+                const tokens = [inputToken, ...mids, outputToken]
+    
+                let pathAmountOut = bn.from(amountIn)
+                const distribution = new Array(DEXES.length).fill('')
+                const dexes = []
+                for (let i = 1; i < tokens.length; ++i) {
+                    const [ amountOut, dist, routes ] = await getBestDistribution(tokens[i-1], tokens[i], pathAmountOut)
+                    if (!amountOut) {
+                        break
+                    }
+    
+                    for (let j = 0; j < distribution.length; ++j) {
+                        distribution[j] = dist[j] + (distribution[j] << 8)
+                    }
+    
+                    dexes.push(routes)
+                    pathAmountOut = amountOut
+                }
+                // console.error({amountOut, distribution, tokens})
+                if (pathAmountOut.gt(best.amount)) {
+                    // console.error(amountOut.toString())
+                    best.amount = pathAmountOut
+                    best.distribution = distribution
+                    best.path = tokens
+                    best.pathRoutes = dexes
+                }
+            }
+    
+            if (!best.amount || best.amount.isZero()) {
+                return
+            }
+    
+            let hops = 0
+            const routeNames = best.pathRoutes.map(dx => dx.map(d => {
+                if (!d.mid) {
+                    hops++
+                    return d.swap
+                }
+                hops += 2
+                return `${d.swap} over ${tokenName(d.mid)}`
+            }))
+            const routeList = []
+            for (let i = 0; i < best.path.length; ++i) {
+                routeList.push(tokenName(best.path[i]))
+                if (i < routeNames.length) {
+                    routeList.push(routeNames[i])
+                }
+            }
+    
+            const predictedGas = predictGas(hops)
+            const fee = await getGasAsToken(outputToken, gasPrice.mul(predictedGas))
+    
+            console.log('=========', {nom, hops, predictedGas})
+            console.log(routeList)
+            console.log('amountOut', best.amount.toString(), '-', fee.toString(), '=', best.amount.sub(fee).toString())
+    
+            return {
+                amountOut: best.amount.toString(),
+                tokens: best.path,
+                distribution: best.distribution,
+                estimatedGas: predictedGas,
+                feeInOutputToken: fee.toString(),
             }
         }
+    }
 
-        if (!best.amount || best.amount.isZero()) {
-            return
-        }
-
-        let hops = 0
-        const routeNames = best.pathRoutes.map(dx => dx.map(d => {
-            if (!d.mid) {
-                hops++
-                return d.swap
-            }
-            hops += 2
-            return `${d.swap} over ${tokenName(d.mid)}`
-        }))
-        const routeList = []
-        for (let i = 0; i < best.path.length; ++i) {
-            routeList.push(tokenName(best.path[i]))
-            if (i < routeNames.length) {
-                routeList.push(routeNames[i])
-            }
-        }
-
-        const predictedGas = predictGas(hops)
-        const fee = await getGasAsToken(outputToken, gasPrice.mul(predictedGas))
-
-        console.log('=========', {nom, hops, predictedGas})
-        console.log(routeList)
-        console.log('amountOut', best.amount.toString(), '-', fee.toString(), '=', best.amount.sub(fee).toString())
-
-        return {
-            amountOut: best.amount.toString(),
-            tokens: best.path,
-            distribution: best.distribution,
-            estimatedGas: predictedGas,
-            feeInOutputToken: fee.toString(),
-        }
+    return {
+        getAmountOut,
+        findPath,
     }
 }
 
-exports.findPath = findPath
+exports.createSwapContext = createSwapContext
