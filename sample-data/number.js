@@ -91,22 +91,12 @@ function _randomUnsignedBigInt(min, max) {
     return result
 }
 
-// just a random number
-_randomUnsignedBigInt._previousSeed = new BigNumber(3)
-
-// just a random number
-_randomUnsignedBigInt._MULTIPLER = new BigNumber(0x669D73573)
-
-// just a random number
-_randomUnsignedBigInt._ADDITIONAL = new BigNumber(0x5C630)
-
+// {Map<RandomKey, BigNumber>}
 _randomUnsignedBigInt._seedMap = new Map()
 
-// Map<String, Array[]>
-//  * [0] {String} Key
-//  * [1] {BigNumber} Previous seed value.
-//  * [2] {BigNumber} Multipler
-//  * [3] {BigNumber} Additional
+// Map<RandomKey, Array[]>
+//  * Array[0] {BigNumber} Multipler
+//  * Array[1] {BigNumber} Additional
 _randomUnsignedBigInt._contextMap = new Map()
 
 // Input
