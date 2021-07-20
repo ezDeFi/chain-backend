@@ -1,0 +1,67 @@
+{
+    "random_count": 3,
+    "token_pairs": [
+        {
+            "token_a": "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
+            "token_b": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+            "exchanges": [
+                {
+                    "name": "pancake",
+                    "boundary_a": ["4857203475", "38274034"],
+                    "boundary_b": ["4857203475", "38274034"]
+                },
+                {
+                    "name": "pancake2",
+                    "boundary_a": ["4075034875", "8347508347"],
+                    "boundary_b": ["4075034875", "8347508347"]
+                },
+                {
+                    "name": "bakery",
+                    "boundary_a": ["4075034875", "8347508347"],
+                    "boundary_b": ["4075034875", "8347508347"]
+                },
+                {
+                    "name": "jul",
+                    "boundary_a": ["4075034875", "8347508347"],
+                    "boundary_b": ["4075034875", "8347508347"]
+                },
+                {
+                    "name": "ape",
+                    "boundary_a": ["4075034875", "8347508347"],
+                    "boundary_b": ["4075034875", "8347508347"]
+                }
+            ]
+        },
+        {
+            "token_a": "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
+            "token_b": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+            "exchanges": [
+                {
+                    "name": "pancake",
+                    "boundary_a": ["4857203475", "38274034"],
+                    "boundary_b": ["4857203475", "38274034"]
+                },
+                {
+                    "name": "pancake2",
+                    "boundary_a": ["4075034875", "8347508347"],
+                    "boundary_b": ["4075034875", "8347508347"]
+                },
+                {
+                    "name": "bakery",
+                    "boundary_a": ["4075034875", "8347508347"],
+                    "boundary_b": ["4075034875", "8347508347"]
+                },
+                {
+                    "name": "jul",
+                    "boundary_a": ["4075034875", "8347508347"],
+                    "boundary_b": ["4075034875", "8347508347"]
+                },
+                {
+                    "name": "ape",
+                    "boundary_a": ["4075034875", "8347508347"],
+                    "boundary_b": ["4075034875", "8347508347"]
+                }
+            ]
+        }
+    ]
+}
