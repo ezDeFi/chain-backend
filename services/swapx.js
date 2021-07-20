@@ -2,7 +2,7 @@ const _ = require('lodash')
 const { ZERO_ADDRESS } = require('../helpers/constants').hexes
 const { TOKENS } = require('../helpers/constants').bsc
 const Bluebird = require('bluebird')
-const ConfigModel = require('../models/ConfigModel')
+const PairModel = require('../models/PairModel')
 const UniswapV2Router01 = require('../ABIs/UniswapV2Router01.json').abi
 const UniswapV2Pair = require('../ABIs/UniswapV2Pair.json').abi
 const stopwatch = require('../helpers/stopwatch')
@@ -184,15 +184,15 @@ function hopsGas(hops) {
 }
 
 const cacheState = {}
-async function getStateDB(key) {
-    if (cacheState.hasOwnProperty(key)) {
-        return cacheState[key]
+async function getStateDB(address) {
+    if (cacheState.hasOwnProperty(address)) {
+        return cacheState[address]
     }
     const value = await stopwatch.watch(
-        ConfigModel.findOne(({ key })).lean().then(m => m && m.value),
+        PairModel.findOne({ address }).lean(),
         'database',
     )
-    return cacheState[key] = value
+    return cacheState[address] = value
 }
 
 function createSwapContext({gasPrice, gasToken, getState}) {
@@ -210,12 +210,11 @@ function createSwapContext({gasPrice, gasToken, getState}) {
     const cacheAccuracy = {}
     async function getPairReserves(swap, inputToken, outputToken) {
         const { address, backward } = await findPair(swap, inputToken, outputToken)
-        const key = `pair-Sync-${address}`
-        const reserve = await getState(key)
-        if (!reserve) {
+        const pair = await getState(address)
+        if (!pair || !pair.reserve0 || !pair.reserve1) {
             return []
         }
-        const [ r0, r1 ] = reserve.split('/').map(r => bn('0x'+r))
+        const [ r0, r1 ] = [ pair.reserve0, pair.reserve1 ]
     
         if (process.env.DEBUG && !cacheAccuracy.hasOwnProperty(address)) {
             const contract = new ethers.Contract(address, UniswapV2Pair, getProvider())
