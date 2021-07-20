@@ -6,10 +6,14 @@
 //  * toHeximal()
 //  * toDecimal()
 //
-// Example
+// Example 1
 //  let a = randomUnsignedBigInt(0, 100)
 //  let b = randomUnsignedBigInt('1000', '100000000')
 //  let c = randomUnsignedBigInt('1000', new BigNumber('1000000000000'))
+//
+// Example 2
+//  randomUnsignedBigInt.seed(56473)
+//  let n = randomUnsignedBigInt(100, 200)
 
 const BigNumber = require('bignumber.js')
 
@@ -28,6 +32,9 @@ function randomUnsignedBigInt(min, max) {
     return _randomUnsignedBigInt(minBigNumber, maxBigNumber)
 }
 
+// Descriptions
+//  * Set the first seed of random in range [min, max].
+//
 // Input
 //  * min {Number | DecimalString | BigNumber} Lower bound of random.
 //  * min {Number | DecimalString | BigNumber} Upper bound of random.
@@ -146,11 +153,15 @@ function _getRandomKey(min, max) {
 //  * [0] {BigNumber} Multipler for random in rage [min, max].
 //  * [1] {BigNumber} Additional for random in range [min, max].
 function _getRandomContext(key, min, max) {
-    let context = _randomUnsignedBigInt._contextMap.get(key) ||
-        [
+    let context = _randomUnsignedBigInt._contextMap.get(key) 
+    
+    if (!context) {
+        context = [
             _getRandomMultipler(min, max),
             _getRanomAdditional(min, max)
         ]
+        _randomUnsignedBigInt._contextMap.set(key, context)
+    }
     
     return context
 }
