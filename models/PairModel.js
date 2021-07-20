@@ -13,6 +13,7 @@ var PairSchema = new Schema({
         type: Number,
         require: false,
     },
+    direction:  { type: Boolean, required: false },
     liquidity:  { type: String, required: false },
     factory:    { type: String, required: false },
     token0:     { type: String, required: false },

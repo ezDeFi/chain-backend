@@ -47,6 +47,7 @@ exports.pair = [
 			states = states
 				.reduce((states, s, i) => ({...states, [s.address]: {
 					deviation: (100000000 / s.rank).toFixed(2) + '%',
+					direction: s.direction ? 'forward' : 'backward',
 					liquidity: s.liquidity,
 					factory: s.factory,
 					token0: s.token0,

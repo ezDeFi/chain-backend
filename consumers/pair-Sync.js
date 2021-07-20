@@ -142,9 +142,16 @@ module.exports = (key) => {
                     // console.error({address, r0, r1})
                     const num = bn(r0).mul(s1)
                     const denom = bn(r1).mul(s0)
-                    const delta = num.gt(denom) ? num.sub(denom) : denom.sub(num)
+                    const direction = num.gt(denom)
+                    const deviation = direction ? num.sub(denom) : denom.sub(num)
                     const value = changes.get(address) || {}
-                    value.rank = delta.isZero() ? null : num.mul(bn(1000000)).div(delta).toNumber()
+                    try {
+                        value.rank = deviation.isZero() ? null : num.mul(bn(1000000)).div(deviation).toNumber()
+                        value.direction = direction
+                    } catch(err) {
+                        console.error(err)
+                        value.rank = null
+                    }
                     // console.error({address, value})
                     changes.set(address, value)
                 })
