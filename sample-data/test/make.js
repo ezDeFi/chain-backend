@@ -6,6 +6,17 @@ const BigNumber = require('bignumber.js')
 const make = require('../make')
 
 describe('make', () => {
+    it('make from configuration that has no token pairs', () => {
+        let config = {
+            random_count: 1,
+            token_pairs: []
+        }
+        let listOfStateList = make(config)
+
+        assert.strictEqual(Array.isArray(listOfStateList), true)
+        assert.strictEqual(listOfStateList.length, 1)
+    })
+
     it('make from simple configuration', () => {
         let config = {
             random_count: 1,
