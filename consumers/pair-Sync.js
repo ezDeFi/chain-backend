@@ -72,30 +72,6 @@ module.exports = (key) => {
                     return
                 }
                 // console.error({token0, token1})
-                
-                const lqs = await Bluebird
-                    .map([[token0, pair.reserve0], [token1, pair.reserve1]], ([token, r]) => {
-                        return Bluebird.map(Object.keys(SERVICES), async swap => {
-                            if (token == TOKENS.WBNB) return
-                            const riro = await context.getPairReserves(swap, token, TOKENS.WBNB)
-                            if (!riro || !riro.length) return
-                            const [ri, ro] = riro
-                            return bn(r).mul(bn(ro)).div(bn(ri))
-                        })
-                    })
-                    .then(_.flatten)
-                    .filter(lq => !!lq)
-
-                if (lqs && lqs.length) {
-                    const avg = lqs.reduce((sum, lq) => sum.add(lq), bn(0)).div(bn(lqs.length))
-                    console.error(address, lqs.length, avg.toString())
-                    pair.liquidity = avg.toString()
-
-                    // TODO: VERIFY the swap rate to mark the strange token (e.g. with transfer fee)
-                } else {
-                    delete pair.liquidity
-                }
-                changes.set(address, pair)
 
                 const rs = await Bluebird
                     .map(Object.keys(SERVICES), async swap => {
@@ -116,6 +92,42 @@ module.exports = (key) => {
                     }
                     return
                 }
+
+                if (rs.length == 1) {
+                    const [address] = rs[0]
+                    const pair = changes.get(address) || {}
+                    pair.rank = null
+                    pair.liquidity = null
+                    changes.set(address, pair)
+                    return
+                }
+
+                const lqs = await Bluebird
+                    .map([[token0, pair.reserve0], [token1, pair.reserve1]], ([token, r]) => {
+                        return Bluebird.map(Object.keys(SERVICES), async swap => {
+                            if (token == TOKENS.WBNB) return
+                            const riro = await context.getPairReserves(swap, token, TOKENS.WBNB)
+                            if (!riro || !riro.length) return
+                            const [ri, ro] = riro
+                            return {
+                                swap,
+                                token,
+                                amount: bn(r).mul(bn(ro)).div(bn(ri)),
+                            }
+                        })
+                    })
+                    .then(_.flatten)
+                    .filter(lq => !!lq)
+
+                if (lqs && lqs.length) {
+                    // console.error(lqs.map(lq => ({...lq, amount: lq.amount.toString()})))
+                    const avg = lqs.reduce((sum, lq) => sum.add(lq.amount), bn(0)).div(bn(lqs.length))
+                    // console.error(address, lqs.length, avg.toString())
+                    pair.liquidity = avg.toString()
+                } else {
+                    pair.liquidity = null
+                }
+                changes.set(address, pair)
 
                 const [s0, s1] = rs.reduce(([s0, s1], [, r0, r1]) => {
                     return [
