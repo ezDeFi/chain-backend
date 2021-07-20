@@ -30,6 +30,7 @@ exports.pair = [
 				var states = await PairModel.find({
 					rank: { $exists: true, $ne: null },
 					liquidity: { $exists: true, $ne: null },
+					$expr: { $gt: [ { $strLenCP: "$liquidity" }, 18 ] },	// >= 1 BNB
 				}).sort({rank:1}).limit(6).lean()
 			} else {
 				const keys = key.split(',')
