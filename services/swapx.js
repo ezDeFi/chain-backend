@@ -67,12 +67,32 @@ const DEXES = [
     { swap: 'ape', mid: TOKENS.BUSD },          // 17
 ]
 
-const ROUTERS = {
-    pancake: '0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F',
-    bakery: '0xCDe540d7eAFE93aC5fE6233Bee57E1270D3E330F',
-    pancake2: '0x10ED43C718714eb63d5aA57B78B54704E256024E',
-    // jul: '0xbd67d157502A23309Db761c41965600c2Ec788b2',
-    ape: '0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7',
+const SERVICES = {
+    pancake: {
+        factory: '0xBCfCcbde45cE874adCB698cC183deBcF17952812',
+        factoryBlock: 586851,
+        router: '0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F',
+    },
+    bakery: {
+        factory: '0x01bF7C66c6BD861915CdaaE475042d3c4BaE16A7',
+        factoryBlock: 470617,
+        router: '0xCDe540d7eAFE93aC5fE6233Bee57E1270D3E330F',
+    },
+    pancake2: {
+        factory: '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73',
+        factoryBlock: 6809737,
+        router: '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+    },
+    // jul: {
+    //     factory: '0x553990F2CBA90272390f62C5BDb1681fFc899675',
+    //     factoryBlock: 784352,
+    //     router: '0xbd67d157502A23309Db761c41965600c2Ec788b2',
+    // },
+    ape: {
+        factory: '0x0841BD0B734E4F5853f0dD8d7Ea041c241fb0Da6',
+        factoryBlock: 4855901,
+        router: '0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7',
+    },
 }
 
 const sum = (chunks) => chunks.reduce((sum, a) => sum + a, 0)
@@ -91,11 +111,11 @@ function getRouterContract(swap) {
     if (CONTRACTS[swap]) {
         return CONTRACTS[swap]
     }
-    if (!ROUTERS[swap]) {
+    if (!SERVICES[swap].router) {
         console.warn(`WARN: no router address for ${swap}`)
         return
     }
-    return CONTRACTS[swap] = new ethers.Contract(ROUTERS[swap], UniswapV2Router01, getProvider())
+    return CONTRACTS[swap] = new ethers.Contract(SERVICES[swap].router, UniswapV2Router01, getProvider())
 }
 
 async function getAmountOutByReserves(swap, amountIn, reserveIn, reserveOut) {
@@ -185,7 +205,7 @@ function createSwapContext({gasPrice, gasToken, getState}) {
     }
 
     const cacheAccuracy = {}
-    async function getReserves(swap, inputToken, outputToken) {
+    async function getPairReserves(swap, inputToken, outputToken) {
         const { address, backward } = await findPair(swap, inputToken, outputToken)
         const key = `pair-Sync-${address}`
         const reserve = await getState(key)
@@ -212,10 +232,10 @@ function createSwapContext({gasPrice, gasToken, getState}) {
     }
     
     async function getAmountOut(swap, inputToken, outputToken, amountIn) {
-        if (!ROUTERS.hasOwnProperty(swap)) {
+        if (!SERVICES.hasOwnProperty(swap)) {
             return 0
         }
-        const [ rin, rout ] = await getReserves(swap, inputToken, outputToken)
+        const [ rin, rout ] = await getPairReserves(swap, inputToken, outputToken)
         if (!rin || !rout) {
             return 0
         }
@@ -259,7 +279,7 @@ function createSwapContext({gasPrice, gasToken, getState}) {
                     }
                     const path = [gasToken, ...mids, token]
     
-                    for (const swap in ROUTERS) {
+                    for (const swap in SERVICES) {
                         const amountOut = await getRouteAmountOut(swap, path, wei)
                         if (amountOut && !amountOut.isZero()) {
                             _cacheGasRoute = { swap, path }
@@ -480,9 +500,11 @@ function createSwapContext({gasPrice, gasToken, getState}) {
     }
 
     return {
+        getPairReserves,
         getAmountOut,
         findPath,
     }
 }
 
+exports.SERVICES = SERVICES
 exports.createSwapContext = createSwapContext
