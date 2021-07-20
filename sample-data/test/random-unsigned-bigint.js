@@ -183,7 +183,7 @@ describe('randomUnsignedBigInt', () => {
             )
             assert.strictEqual(
                 actualResult.lt(min), false,
-                `result is less then lower boundary: ${toDecimal(actualResult)}`
+                `result is less then lower boundary`
             )
             assert.strictEqual(
                 actualResult.gt(max), false,
