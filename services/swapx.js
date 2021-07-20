@@ -72,26 +72,31 @@ const SERVICES = {
         factory: '0xBCfCcbde45cE874adCB698cC183deBcF17952812',
         factoryBlock: 586851,
         router: '0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F',
+        fee10000: 20,
     },
     bakery: {
         factory: '0x01bF7C66c6BD861915CdaaE475042d3c4BaE16A7',
         factoryBlock: 470617,
         router: '0xCDe540d7eAFE93aC5fE6233Bee57E1270D3E330F',
+        fee10000: 30,
     },
     pancake2: {
         factory: '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73',
         factoryBlock: 6809737,
         router: '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+        fee10000: 25,
     },
     // jul: {
     //     factory: '0x553990F2CBA90272390f62C5BDb1681fFc899675',
     //     factoryBlock: 784352,
     //     router: '0xbd67d157502A23309Db761c41965600c2Ec788b2',
+    //     fee10000: 30,
     // },
     ape: {
         factory: '0x0841BD0B734E4F5853f0dD8d7Ea041c241fb0Da6',
         factoryBlock: 4855901,
         router: '0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7',
+        fee10000: 20,
     },
 }
 
@@ -122,7 +127,7 @@ async function getAmountOutByReserves(swap, amountIn, reserveIn, reserveOut) {
     if (!amountIn || amountIn.isZero()) {
         return 0
     }
-    const fee10000 = FEE10000[swap]
+    const fee10000 = SERVICES[swap].fee10000
     const amountInWithFee = bn(10000).sub(fee10000).mul(amountIn)
     const numerator = amountInWithFee.mul(reserveOut)
     const denominator = bn(reserveIn).mul(10000).add(amountInWithFee)
@@ -138,8 +143,6 @@ async function getAmountOutByReserves(swap, amountIn, reserveIn, reserveOut) {
     }
     return amountOut
 }
-
-const FEE10000 = { pancake2: 25, pancake: 20, bakery: 30, ape: 20, jul: 30 }
 
 // async function getFee10000(swap) {
 //     if (FEE10000[swap]) {
