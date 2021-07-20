@@ -29,16 +29,26 @@
 
 // Type MakeTokenPairExchange {Object}
 //  * name {ExchangeName}
-//  * boundary_a {Array}
-//  * boundary_a[0] {DecimalString} Lower reserve boundary of token_a.
-//  * boundary_b[1] {DecimalString} Upper reserve boundary of token_a.
-//  * boundary_b {Array} It is similar like `boundary_a` but for token_b.
+//  * boundary_a {TokenReserveBoundary}
+//  * boundary_b {TokenReserveBoundary}
+
+// Type TokenReserveBoundary {Array}
+//  * [0] {DecimalString} Lower reserve boundary.
+//  * [1] {DecimalString} Upper reserve boundary.
 
 // Type ExchangeName {String}
 //
 // It can be one of following values `pancake`, `pancake2`, `bakery`,
 // `jul` and `ape`.
 
+// Type TokenPairStateList {Array<TokenPairState>}
+
+// Type TokenPairState {Object}
+//  * address {EthAddress}
+//  * reserve0 {BigNumber}
+//  * reserve1 {BigNumber}
+
+////////////////////////
 // Type TokenPairReserves {String}
 //
 // Pattern: `{HeximalString}/{HeximalString}`
