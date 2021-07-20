@@ -1,7 +1,9 @@
+const _ = require('lodash');
 const { ethers } = require('ethers')
 const contractABI = require('../ABIs/UniswapV2Pair.json').abi
 const update = require('./factory/update')
 const { ZERO_ADDRESS } = require('../helpers/constants').hexes
+const { TOKENS } = require('../helpers/constants').bsc
 const PairModel = require('../models/PairModel')
 const Bluebird = require('bluebird')
 const { SERVICES, createSwapContext } = require('../services/swapx')
@@ -44,7 +46,7 @@ module.exports = (key) => {
                 if (cacheState.has(address)) {
                     return cacheState.get(address)
                 }
-                const value = await PairModel.findOne(({ address })).lean()
+                const value = await PairModel.findOne({ address }).lean()
                 if (!value) {
                     return
                 }
@@ -57,7 +59,7 @@ module.exports = (key) => {
                 return value
             }
 
-            // const context = createSwapContext({ getState })
+            const context = createSwapContext({ getState })
 
             await Bluebird.map(Array.from(changes.keys()), async (address) => {
                 const pair = await getState(address)
@@ -70,6 +72,31 @@ module.exports = (key) => {
                     return
                 }
                 // console.error({token0, token1})
+                
+                const lqs = await Bluebird
+                    .map([[token0, pair.reserve0], [token1, pair.reserve1]], ([token, r]) => {
+                        return Bluebird.map(Object.keys(SERVICES), async swap => {
+                            if (token == TOKENS.WBNB) return
+                            const riro = await context.getPairReserves(swap, token, TOKENS.WBNB)
+                            if (!riro || !riro.length) return
+                            const [ri, ro] = riro
+                            return bn(r).mul(bn(ro)).div(bn(ri))
+                        })
+                    })
+                    .then(_.flatten)
+                    .filter(lq => !!lq)
+
+                if (lqs && lqs.length) {
+                    const avg = lqs.reduce((sum, lq) => sum.add(lq), bn(0)).div(bn(lqs.length))
+                    console.error(address, lqs.length, avg.toString())
+                    pair.liquidity = avg.toString()
+
+                    // TODO: VERIFY the swap rate to mark the strange token (e.g. with transfer fee)
+                } else {
+                    delete pair.liquidity
+                }
+                changes.set(address, pair)
+
                 const rs = await Bluebird
                     .map(Object.keys(SERVICES), async swap => {
                         const address = bscUtil.findPair(swap, token0, token1)
@@ -97,16 +124,16 @@ module.exports = (key) => {
                     ]
                 }, [bn(0), bn(0)])
 
-                console.error(s0.toString(), s1.toString(), rs)
+                // console.error(s0.toString(), s1.toString(), rs)
 
                 return Bluebird.map(rs, ([address, r0, r1]) => {
-                    console.error({address, r0, r1})
+                    // console.error({address, r0, r1})
                     const num = bn(r0).mul(s1)
                     const denom = bn(r1).mul(s0)
                     const delta = num.gt(denom) ? num.sub(denom) : denom.sub(num)
                     const value = changes.get(address) || {}
                     value.rank = delta.isZero() ? null : num.mul(bn(1000000)).div(delta).toNumber()
-                    console.error({address, value})
+                    // console.error({address, value})
                     changes.set(address, value)
                 })
 

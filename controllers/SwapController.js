@@ -27,7 +27,10 @@ exports.pair = [
 		try {
 			const { key } = req.params
 			if (!key) {
-				var states = await PairModel.find({ rank: { $exists: true, $ne: null }}).sort({rank:1}).limit(6).lean()
+				var states = await PairModel.find({
+					rank: { $exists: true, $ne: null },
+					liquidity: { $exists: true, $ne: null },
+				}).sort({rank:1}).limit(6).lean()
 			} else {
 				const keys = key.split(',')
 				if (!key.length) {
