@@ -9,7 +9,7 @@ describe('make', () => {
     it('make from configuration that has no token pairs', () => {
         let config = {
             random_count: 1,
-            seed_count: 10,
+            seed_pair_count: 10,
             token_pairs: []
         }
         let listOfStateList = make(config)
@@ -21,7 +21,7 @@ describe('make', () => {
     it('make from simple configuration', () => {
         let config = {
             random_count: 1,
-            seed_count: 10,
+            seed_pair_count: 10,
             token_pairs: [
                 {
                     token_a: '0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82',

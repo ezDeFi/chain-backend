@@ -1,9 +1,8 @@
 # Sample Data
 
-* Provide a way to make sample dataset, where dataset is set of token pair
-  state, each token pair state includes it's address, reserve of token0 and
-  token1.
-* Provide APIs to access to that sample data.
+* This module makes sample dataset, where dataset is set of token pair
+  states, each token pair state includes it's `address`, `reserve0` and `reserve1`.
+* It also exports APIs to access to that sample data, see [APIs](#apis) for more details.
 
 # Use
 
@@ -11,13 +10,14 @@
 npm run make-sample-data
 ```
 
-* This comand deletes all existed data files then makes sample data from
-  configuration file.
+* This command should be skip, unless there is no files in data directory or
+  configuration files is changed or added.
+* It deletes all existed data files then makes new ones from configuration
+  files.
 * Configuration files is located at directory `./config`, see [Configuration
   File](#configuration-file) for more details.
-* Generated data is put into directory `./data`. This command can be skip,
-  unless there is no files in data directory or configuration files is changed
-  or added.
+* Generated data is put into directory `./data`. That data is deterministic no
+  matter what, unless configuration files is changed.
 * After all, data can be retrieve by [APIs](#apis).
 
 # APIs
@@ -56,7 +56,14 @@ function readPairStateMap() {}
 const {listPairStateMap, readPairStateMap} = require('./sample-data')
 
 let names = listPairStateMap()
-let data = readPairStateMap(names[1])
+let stateMap = readPairStateMap(names[1])
+let state = data.get('6BE969fa4c9AcE0D62825d9Cd6609925Ea7CebCE')
+
+// {
+//   address: '6BE969fa4c9AcE0D62825d9Cd6609925Ea7CebCE',
+//   reserve0: '63e557a00f0e6',
+//   reserve1: '72a79608bbe42'
+// }
 ```
 
 # Configuration Files
@@ -67,7 +74,7 @@ let data = readPairStateMap(names[1])
   make-sample-data`.
 * Configuration files is located at directory `./config` and can be add more
   as needed.
-* Each configuration file can produces more than one a dataset, depend on
+* Each configuration files produces more than one a dataset, depend on
   attribute `random_count`.
 * Configuration file follows JSON data structure. 
 
@@ -75,29 +82,33 @@ let data = readPairStateMap(names[1])
 
 * **ranom_count** `{Number}` Number of dataset will be make from this
   configuration.
+* **seed_pair_count** `{Number}` Number of token pair states will be include
+  to results.
 * **token_pairs** `{Array<Object>}` List of token pair and specification to
   make sample data.
-* **token_pairs[].token_a** `{String}` ETH address of a token.
+* **token_pairs[].token_a** `{String}` ETH address of a token. It could be
+  checksum or non-checksum address, prefix with or without `0x`.
 * **token_pairs[].token_b** `{String}` An other ETH address that create a pair
   with `token_a`.
 * **token_pairs[].exchanges** `{Array<Object>}` List of exchange providers that
   token pair will be listed on.
 * **token_pairs[].exchanges[].name** `{String}` Name of exchange provider, one
-  of `pancake`, `pancake2`, `bakery`, `jul` or `ape`.
+  of following values: `pancake`, `pancake2`, `bakery`, `jul` or `ape`.
 * **token_pairs[].exchanges[].boundary_a** `{Array}` Boundary to random reserve
   for `token_a`.
 * **token_paris[].exchanges[].boundary_a[0]** `{String}` Lower boundary,
-  non-negative integer nubmer as a decimal string.
+  non-negative integer nubmer as a heximal string, with or without prefix
+  `0x`.
 * **token_paris[].exchanges[].boundary_a[0]** `{String}` Upper boundary.
-* **token_paris[].exchanges[].boundary_b** `{Array}` Data structure is similar
-  like `boundary_a` and it's use for `token_b`.
+* **token_paris[].exchanges[].boundary_b** `{Array}` Boundary of reserve for
+  `token_b`, data structure is similar like `boundary_a`.
 
 ## Example
 
 ```json
 {
     "random_count": 3,
-    "seed_count": 5000,
+    "seed_pair_count": 5000,
     "token_pairs": [
         {
             "token_a": "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
@@ -105,28 +116,28 @@ let data = readPairStateMap(names[1])
             "exchanges": [
                 {
                     "name": "pancake",
-                    "boundary_a": ["13579864", "135798645"],
-                    "boundary_b": ["97531246", "975312467"]
+                    "boundary_a": ["13579864abc", "135798645def"],
+                    "boundary_b": ["97531246abd", "975312467def"]
                 },
                 {
                     "name": "pancake2",
-                    "boundary_a": ["1357986420", "13579864200"],
-                    "boundary_b": ["9753124680", "97531246800"]
+                    "boundary_a": ["1357986420abc", "13579864200def"],
+                    "boundary_b": ["9753124680abd", "97531246800def"]
                 },
                 {
                     "name": "bakery",
-                    "boundary_a": ["135798", "1357980"],
-                    "boundary_b": ["975312", "9753120"]
+                    "boundary_a": ["135798abd", "1357980def"],
+                    "boundary_b": ["975312abc", "9753120def"]
                 },
                 {
                     "name": "jul",
-                    "boundary_a": ["1357", "13570"],
-                    "boundary_b": ["9753", "97530"]
+                    "boundary_a": ["1357abc", "13570def"],
+                    "boundary_b": ["9753abc", "97530def"]
                 },
                 {
                     "name": "ape",
-                    "boundary_a": ["135", "1350"],
-                    "boundary_b": ["975", "9750"]
+                    "boundary_a": ["135abc", "1350def"],
+                    "boundary_b": ["975abc", "9750def"]
                 }
             ]
         }

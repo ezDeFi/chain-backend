@@ -5,8 +5,9 @@ const make = require('../make')
 const dataStorage = require('../data-storage')
 
 function main() {    
+    console.log('clean all data files...')
     dataStorage.clear()
-    console.log('clean all data files!')
+    console.log('clean all data files: ok')
 
     for (let configIndex = 0;; ++configIndex) {
         let config = configLoader.next()
@@ -15,21 +16,23 @@ function main() {
             break
         }
 
+        console.log('make following configuration', configIndex + 1, '...')
         let listOfTokenPairStateList = make(config)
+        console.log('make following configuration', configIndex + 1, 'done')
 
         for (let [index, stateList] of listOfTokenPairStateList.entries()) {
             let name = _getDataSetName(configIndex, index)
 
             dataStorage.write(name, stateList)
-            console.log('make', name)
-        }
+            console.log('write', name, 'ok')
+        }        
     }
 
     console.log('finished!')
 }
 
 function _getDataSetName(configIndex, stateListIndex) {
-    return 'data-' + configIndex + '-' + stateListIndex
+    return 'pair-state-' + configIndex + '-' + stateListIndex
 }
 
 main()
