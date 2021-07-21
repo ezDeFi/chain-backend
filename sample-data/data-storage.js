@@ -4,7 +4,7 @@ const path = require('path')
 const fs = require('fs')
 const csvStringify = require('csv-stringify/lib/sync')
 const csvParse = require('csv-parse/lib/sync')
-const {toDecimal} = require('./number')
+const {toHeximal} = require('./number')
 
 // Descriptions
 //  * Write List of token pair state to a file `name` in directory `./data`.
@@ -69,9 +69,9 @@ function clear() {
 function _stateListToCsv(pairStates) {
     let rows = pairStates.map(state => {
         return [
-            state.address,
-            toDecimal(state.reserve0),
-            toDecimal(state.reserve1),
+            _removeHeximalPrefix(state.address),
+            toHeximal(state.reserve0),
+            toHeximal(state.reserve1),
         ]
     })
     
@@ -96,6 +96,21 @@ function _list() {
 
 function _getDataFilePath(name) {
     return path.join(write._DATA_DIR, name)
+}
+
+// Input
+//  * value {String} Heximal with or without prefix `0x`.
+//
+// Output {String} Heximal without prefix `0x`.
+function _removeHeximalPrefix(value) {
+    let prefix = value.slice(0, 2)
+
+    if (prefix === '0x') {
+        return value.slice(2)
+    }
+    else {
+        return value
+    }
 }
 
 module.exports = {

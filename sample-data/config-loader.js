@@ -113,6 +113,10 @@ function _validateConfigFile(config) {
         return 'random_count'
     }
 
+    if (Number.isInteger(config.seed_count)) {
+        return 'seed_count'
+    }
+
     if (!Array.isArray(config.token_pairs)) {
         return 'token_pairs'
     }

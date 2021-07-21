@@ -19,6 +19,8 @@
 // Type MakeConfig {Object}
 //  * random_count {Number} This configuration will be use to make
 //    `random_count` token pair state set.
+//  * seed_count {Number} Number of sample token pairs from seed data will be
+//    include to result.
 //  * token_pairs {Array<MakeTokenPair>} List of token pair will be include in
 //    token pair state set.
 
@@ -48,6 +50,12 @@
 //  * reserve0 {BigNumber}
 //  * reserve1 {BigNumber}
 
+// TokenPairKey {String}
+//
+/// Pattern `address0/address1`
+//  * address0 {EthAddress}
+//  * address1 {EthAddress}
+ 
 ////////////////////////
 // Type TokenPairReserves {String}
 //

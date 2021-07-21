@@ -97,6 +97,7 @@ let data = readPairStateMap(names[1])
 ```json
 {
     "random_count": 3,
+    "seed_count": 5000,
     "token_pairs": [
         {
             "token_a": "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",

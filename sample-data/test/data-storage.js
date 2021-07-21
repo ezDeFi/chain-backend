@@ -13,14 +13,6 @@ describe('dataStorage.list', () => {
 })
 
 describe('dataStorage.read', () => {
-    it('first dataset return empty result', () => {
-        let names = dataStorage.list()
-        let pairStateMap = dataStorage.read(names[0])
-
-        assert.strictEqual(pairStateMap instanceof Map, true)
-        assert.strictEqual(pairStateMap.size, 0)
-    })
-
     it('from second dataset return non empty result', () => {
         let names = dataStorage.list()
         let fromSecondNames = names.splice(1)
