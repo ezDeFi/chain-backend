@@ -1,8 +1,9 @@
 # Sample Data
 
-* This module makes sample dataset, where dataset is set of token pair
-  states, each token pair state includes it's `address`, `reserve0` and `reserve1`.
-* It also exports APIs to access to that sample data, see [APIs](#apis) for more details.
+* This module makes sample dataset, where dataset is set of token pair states,
+  each token pair state includes it's `address`, `reserve0` and `reserve1`.
+* It also exports APIs to access to that sample data, see [APIs](#apis) for
+  more details.
 
 # Use
 
@@ -45,8 +46,8 @@ function listPairStateMap() {}
 //  * key {EthAddress}
 //  * value {Object}
 //  * value.address {String} Address of token pair.
-//  * value.reserve0 {DecimalString}
-//  * value.reserve1 {DecimalString}
+//  * value.reserve0 {HeximalString}
+//  * value.reserve1 {HeximalString}
 function readPairStateMap() {}
 ```
 
@@ -75,44 +76,44 @@ let state = data.get('6BE969fa4c9AcE0D62825d9Cd6609925Ea7CebCE')
 * Configuration files is located at directory `./config` and can be add more
   as needed.
 * Each configuration files produces more than one a dataset, depend on
-  attribute `random_count`.
+  attribute `make_count`.
 * Configuration file follows JSON data structure. 
 
 ## Specifications
 
-* **ranom_count** `{Number}` Number of dataset will be make from this
+* **make_count** `{Number}` Number of datasets will be make from this
   configuration.
 * **seed_pair_count** `{Number}` Number of token pair states will be include
   to results.
-* **token_pairs** `{Array<Object>}` List of token pair and specification to
+* **pair_specs** `{Array<Object>}` List of token pair and specification to
   make sample data.
-* **token_pairs[].token_a** `{String}` ETH address of a token. It could be
+* **pair_specs[].address_a** `{String}` ETH address of a token. It could be
   checksum or non-checksum address, prefix with or without `0x`.
-* **token_pairs[].token_b** `{String}` An other ETH address that create a pair
-  with `token_a`.
-* **token_pairs[].exchanges** `{Array<Object>}` List of exchange providers that
+* **pair_specs[].address_b** `{String}` An other ETH address that create a pair
+  with `address_a`.
+* **pair_specs[].exchanges** `{Array<Object>}` List of exchange providers that
   token pair will be listed on.
-* **token_pairs[].exchanges[].name** `{String}` Name of exchange provider, one
+* **pair_specs[].exchanges[].name** `{String}` Name of exchange provider, one
   of following values: `pancake`, `pancake2`, `bakery`, `jul` or `ape`.
-* **token_pairs[].exchanges[].boundary_a** `{Array}` Boundary to random reserve
-  for `token_a`.
-* **token_paris[].exchanges[].boundary_a[0]** `{String}` Lower boundary,
+* **pair_specs[].exchanges[].boundary_a** `{Array}` Boundary to random reserve
+  for `address_a`.
+* **pair_specs[].exchanges[].boundary_a[0]** `{String}` Lower boundary,
   non-negative integer nubmer as a heximal string, with or without prefix
   `0x`.
-* **token_paris[].exchanges[].boundary_a[0]** `{String}` Upper boundary.
-* **token_paris[].exchanges[].boundary_b** `{Array}` Boundary of reserve for
-  `token_b`, data structure is similar like `boundary_a`.
+* **pair_specs[].exchanges[].boundary_a[0]** `{String}` Upper boundary.
+* **pair_specs[].exchanges[].boundary_b** `{Array}` Boundary of reserve for
+  `address_b`, data structure is similar like `boundary_a`.
 
 ## Example
 
 ```json
 {
-    "random_count": 3,
+    "make_count": 3,
     "seed_pair_count": 5000,
-    "token_pairs": [
+    "pair_specs": [
         {
-            "token_a": "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
-            "token_b": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+            "address_a": "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
+            "address_b": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
             "exchanges": [
                 {
                     "name": "pancake",

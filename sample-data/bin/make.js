@@ -21,7 +21,7 @@ function main() {
         console.log('make following configuration', configIndex + 1, 'done')
 
         for (let [index, stateList] of listOfTokenPairStateList.entries()) {
-            let name = _getDataSetName(configIndex, index)
+            let name = _getDataSetName(configIndex + 1, index + 1)
 
             dataStorage.write(name, stateList)
             console.log('write', name, 'ok')

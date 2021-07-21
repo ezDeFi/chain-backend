@@ -8,13 +8,13 @@ describe('configLoader', () => {
         configLoader.reset()
     })
 
-    it('get first make configuration', () => {
+    it('get first configuration', () => {
         let config = configLoader.next()
 
         assert.notStrictEqual(config, undefined)
     })
 
-    it('get all make configurations', () => {
+    it('get all configurations', () => {
         for (;;) {
             let config = configLoader.next()
 

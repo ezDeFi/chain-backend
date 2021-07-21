@@ -19,7 +19,7 @@ function write(name, pairStates) {
 }
 
 // Descriptions
-//  * Retrieve list of dataset's name that can be load by `read()`.
+//  * Retrieve list of dataset's names that can be load by `read()`.
 //
 // Output {Array<String>}
 function list() {
@@ -29,13 +29,10 @@ function list() {
 // Input
 //  * name {String} Name of dataset that can be retrieve by `list()`.
 //
-//
-// Output {Map<key, value>}
-//  * key {EthAddress}
-//  * value {Object}
-//  * value.address {String} Address of token pair.
-//  * value.reserve0 {DecimalString}
-//  * value.reserve1 {DecimalString}
+// Output {Object}
+//  * value.address {EthAddress} Address of token pair.
+//  * value.reserve0 {HeximalString}
+//  * value.reserve1 {HeximalString}
 function read(name) {
     let filePath = _getDataFilePath(name)
     let fileData = fs.readFileSync(filePath)
@@ -65,7 +62,7 @@ function clear() {
 // Input
 //  * pairState {Array<TokenPairState>}
 //
-// Output {String} Data following CSV format as string.
+// Output {String} Data following CSV format as a string.
 function _stateListToCsv(pairStates) {
     let rows = pairStates.map(state => {
         return [
@@ -81,7 +78,7 @@ function _stateListToCsv(pairStates) {
 }
 
 // Descriptions
-//  * Retrieve list of dataset's name that can be load by `read()`.
+//  * Retrieve list of dataset's names.
 //
 // Output {Array<String>}
 function _list() {
@@ -94,6 +91,10 @@ function _list() {
     return files
 }
 
+// Input
+//  * name {String} File name.
+//
+// Output {String} Absolute path to data file.
 function _getDataFilePath(name) {
     return path.join(write._DATA_DIR, name)
 }
