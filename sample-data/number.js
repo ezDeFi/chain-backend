@@ -20,14 +20,15 @@ const BigNumber = require('bignumber.js')
 // Input
 //  * min {Number | DecimalString | BigNumber} Non negative integer.
 //  * max {Number | DecimalString | BigNumber}
+//  * base {Number} Input based.
 //
 // Output {BigNumber}
 //
 // Errors
 //  * Error `Invalid boundary values`
-function randomUnsignedBigInt(min, max) {
-    let minBigNumber = new BigNumber(min)
-    let maxBigNumber = new BigNumber(max)
+function randomUnsignedBigInt(min, max, base=10) {
+    let minBigNumber = new BigNumber(min, base)
+    let maxBigNumber = new BigNumber(max, base)
 
     return _randomUnsignedBigInt(minBigNumber, maxBigNumber)
 }
