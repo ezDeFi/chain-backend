@@ -8,24 +8,38 @@ const make = require('../make')
 describe('make', () => {
     it('make from configuration that has no token pairs', () => {
         let config = {
-            random_count: 1,
+            make_count: 1,
             seed_pair_count: 10,
-            token_pairs: []
+            pair_specs: []
         }
         let listOfStateList = make(config)
 
         assert.strictEqual(Array.isArray(listOfStateList), true)
         assert.strictEqual(listOfStateList.length, 1)
+        assert.strictEqual(listOfStateList[0].length > 0, true)
+    })
+
+    it('make return no states', () => {
+        let config = {
+            make_count: 1,
+            seed_pair_count: 0,
+            pair_specs: []
+        }
+        let listOfStateList = make(config)
+
+        assert.strictEqual(Array.isArray(listOfStateList), true)
+        assert.strictEqual(listOfStateList.length, 1)
+        assert.strictEqual(listOfStateList[0].length, 0)
     })
 
     it('make from simple configuration', () => {
         let config = {
-            random_count: 1,
+            make_count: 1,
             seed_pair_count: 10,
-            token_pairs: [
+            pair_specs: [
                 {
-                    token_a: '0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82',
-                    token_b: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c',
+                    address_a: '0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82',
+                    address_b: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c',
                     exchanges: [
                         {
                             name: 'pancake',
@@ -66,5 +80,22 @@ describe('make', () => {
             assert.strictEqual(pair.reserve0 instanceof BigNumber, true)
             assert.strictEqual(pair.reserve1 instanceof BigNumber, true)
         }
+    })
+
+    it('make with not enough seed pair state throws error', () => {
+        let config = {
+            make_count: 1,
+            seed_pair_count: 50000,
+            pair_specs: []
+        }
+
+        assert.throws(
+            () => {
+                make(config)
+            },
+            {
+                message: 'Not enough token pair seed states'
+            }
+        )
     })
 })

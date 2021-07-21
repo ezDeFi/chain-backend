@@ -7,34 +7,37 @@ const {findPair} = require('bsc_util')
 const {randomUnsignedBigInt} = require('./number')
 
 // Descriptions
-//  * Make token pair reserve set from configuration.
+//  * Make token pair state set from configuration.
 //
 // Input
 //  * config {MakeConfig}
 //
-// Output {Array<TokenPairStateList>}
+// Output {Array<TokenPairStateSet>}
 function make(config) {
-    let tokenPairStateLists = []
+    let listOfStateSet = []
 
-    for (let count = 1; count <= config.random_count; ++count) {
-        let states = _makeTokenPairStateList(config.token_pairs, config.seed_pair_count)
+    for (let count = 1; count <= config.make_count; ++count) {
+        let stateSet = _makePairStateSet(
+            config.pair_specs, 
+            config.seed_pair_count
+        )
 
-        tokenPairStateLists.push(states)
+        listOfStateSet.push(stateSet)
     }
 
-    return tokenPairStateLists
+    return listOfStateSet
 }
 
 // Input
-//  * specs {Array<MakeTokenPair>}
-//  * seedCount {Number}
+//  * specs {Array<MakePairSpec>}
+//  * seedPairCount {Number}
 //
 // Output {Array<TokenPairState>}
-function _makeTokenPairStateList(specs, seedCount) {
-    let fullSpecs = _mergeWithSeedSpecs(specs, seedCount)
-    let stateListOfList = fullSpecs.map(_makeTokenPairStateFromSpec)
+function _makePairStateSet(specs, seedPairCount) {
+    let fullSpecs = _mergeWithSeedSpecs(specs, seedPairCount)
+    let listOfStateList = fullSpecs.map(_makePairStateFromSpec)
 
-    return stateListOfList.flat(1)
+    return listOfStateList.flat(1)
 }
 
 // Input
@@ -49,14 +52,14 @@ function _getTokenPairKey(addressA, addressB) {
 }
 
 // Input 
-//  * spec {MakeTokenPair}
+//  * spec {MakePairSpec}
 //
 // Output {Array<TokenPairState>}
-function _makeTokenPairStateFromSpec({token_a, token_b, exchanges}) {
+function _makePairStateFromSpec({address_a, address_b, exchanges}) {
     return exchanges.map(exchange => {
-        return _makeTokenPairFromExchange(
-            token_a, 
-            token_b, 
+        return _makePairStateFromExchangeSpec(
+            address_a, 
+            address_b, 
             exchange.name,
             exchange.boundary_a,
             exchange.boundary_b
@@ -64,17 +67,20 @@ function _makeTokenPairStateFromSpec({token_a, token_b, exchanges}) {
     })
 }
 
+// Input
+//  * address_a {EthAddress}
+//  * address_b {EthAddress}
 // Output {TokenPairState}
-function _makeTokenPairFromExchange(
-    token_a, 
-    token_b, 
+function _makePairStateFromExchangeSpec(
+    address_a, 
+    address_b, 
     exchange,
     boundary_a, 
     boundary_b
 ) {
-    let address = findPair(exchange, token_a, token_b)
-    let [boundary0, boundary1] = _getBoundaryByTokenOrder(
-        token_a, token_b,
+    let address = findPair(exchange, address_a, address_b)
+    let [boundary0, boundary1] = _getBoundaryByOrderedTokens(
+        address_a, address_b,
         boundary_a, boundary_b
     )
     let reserve0 = randomUnsignedBigInt(...boundary0, 16)
@@ -83,20 +89,30 @@ function _makeTokenPairFromExchange(
     return {address, reserve0, reserve1}
 }
 
+// Input
+//  * addressA {EthAddress}
+//  * addressB {EthAddress}
+//  * boundaryA {HeximalRandomBoundary}
+//  * boundaryB {HeximalRandomBoundary}
+//
 // Output {Array}
 //  * [0] {TokenReserveBoundary} Boundary of token0.
 //  * [1] {TokenReserveBoundary} Boundary of token1.
-function _getBoundaryByTokenOrder(token_a, token_b, boundary_a, boundary_b) {
+function _getBoundaryByOrderedTokens(
+    addressA,
+    addressB, 
+    boundaryA, 
+    boundaryB
+) {
     let tokens = [
-        {address: token_a.toLowerCase(), boundary: boundary_a},
-        {address: token_b.toLowerCase(), boundary: boundary_b}
+        {address: addressA.toLowerCase(), boundary: boundaryA},
+        {address: addressB.toLowerCase(), boundary: boundaryB}
     ]
     let orderedTokens = tokens.sort((a, b) => {
         return a.address > b.address ? 1 : -1
     })
-    let boundaries = orderedTokens.map(token => token.boundary)
-
-    return boundaries
+    
+    return orderedTokens.map(token => token.boundary)
 }
 
 // Input
@@ -113,27 +129,28 @@ function _getOrderedTokens(tokenA, tokenB) {
 }
 
 // Descriptions
-//  * Return list of token pair random requests that includes:
-//  * Seed token pairs.
-//  * If there is a token pair random request in `specs` then it will be
-//    override to seed token pairs.
+//  * Return list of token pair specifications to make that includes:
+//  * Seed token pairs from file `./seed-pair-state`.
+//  * If there is the same token pair from `specs` and seed data then
+//    specification from `specs` is pick.
 //
 // Input
-//  * specs {Array<MakeTokenPair>}
-//  * seedCount {Number}
+//  * specs {Array<MakePairSpec>}
+//  * seedCount {UnsignedInteger} Number of seed pairs will be include to
+//    results.
 //
-// Output {Array<MakeTokenPair>}
+// Output {Array<MakePairSpec>}
 function _mergeWithSeedSpecs(specs, seedCount) {
-    let seedStates = _getSeedStates(seedCount)
+    let seedStates = _getSeedPairStates(seedCount)
     let seedSpecMap = new Map(
         seedStates.map(state => [
             _getTokenPairKey(state.address0, state.address1),
-            _tokenPairFromSeedState(state)
+            _makePairStateFromSeedState(state)
         ])
     )
 
     for (let spec of specs) {
-        let key = _getTokenPairKey(spec.token_a, spec.token_b)
+        let key = _getTokenPairKey(spec.address_a, spec.address_b)
 
         seedSpecMap.set(key, spec)
     }
@@ -143,14 +160,17 @@ function _mergeWithSeedSpecs(specs, seedCount) {
     )
 }
 
-// Input
-//  * state {SeedTokenPair}
+// Descriptions
+//  * Create token pair specification to make from seed state.
 //
-// Output {MakeTokenPair}
-function _tokenPairFromSeedState(state) {
+// Input
+//  * state {SeedPairState}
+//
+// Output {MakePairSpec}
+function _makePairStateFromSeedState(state) {
     return {
-        token_a: state.address0,
-        token_b: state.address1,
+        address_a: state.address0,
+        address_b: state.address1,
         exchanges: [
             {
                 name: 'pancake',
@@ -181,34 +201,40 @@ function _tokenPairFromSeedState(state) {
     }
 }
 
-// Input
-//  * count {Number} Number of states to get.
+// Descriptions
+//  * Query to file system at the first time, from second one return cached
+//    data.
 //
-// Output {Array<SeedTokenPair>}
+// Input
+//  * count {Number} Number of states to get. If it does not specify then
+//    return all pair states.
+//
+// Output {Array<SeedPairState>}
 //
 // Errors
-//  * Error `Not enough token pair seed states`
-function _getSeedStates(count) {
-    if (!_getSeedStates._pairStates) {
-        _getSeedStates._pairStates = _readSeedStates()
+//  * Error `Not enough seed pair states`
+function _getSeedPairStates(count=undefined) {
+    if (!_getSeedPairStates._pairStates) {
+        _getSeedPairStates._pairStates = _readSeedPairStates()
     }
 
-    if (count > _getSeedStates._pairStates.length) {
+    if (count === undefined) {
+        return _getSeedPairStates._pairStates
+    }
+
+    if (count > _getSeedPairStates._pairStates.length) {
         throw Error('Not enough token pair seed states')
     }
 
-    return _getSeedStates._pairStates.slice(0, count)
+    return _getSeedPairStates._pairStates.slice(0, count)
 }
 
-_getSeedStates._pairStates = undefined
+// Array<SeedPairState>
+_getSeedPairStates._pairStates = undefined
 
-// Output {Array<Object>}
-//  * [].address0 {EthAddress}
-//  * [].address1 {EthAddress}
-//  * [].reserve0 {HeximalString}
-//  * [].reserve1 {HeximalString}
-function _readSeedStates() {
-    let rawData = fs.readFileSync(_readSeedStates._DATA_FILE)
+// Output {Array<SeedPairState>}
+function _readSeedPairStates() {
+    let rawData = fs.readFileSync(_readSeedPairStates._DATA_FILE)
     let rows = csvParse(rawData, {
         cast: false,
         columns: true
@@ -218,6 +244,6 @@ function _readSeedStates() {
 }
 
 // {String} Path to file that contains seed token pair states.
-_readSeedStates._DATA_FILE = path.join(__dirname, 'seed-data')
+_readSeedPairStates._DATA_FILE = path.join(__dirname, 'seed-pair-state')
 
 module.exports = make
