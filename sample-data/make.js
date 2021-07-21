@@ -17,7 +17,7 @@ function make(config) {
     let tokenPairStateLists = []
 
     for (let count = 1; count <= config.random_count; ++count) {
-        let states = _makeTokenPairStateList(config.token_pairs, config.seed_count)
+        let states = _makeTokenPairStateList(config.token_pairs, config.seed_pair_count)
 
         tokenPairStateLists.push(states)
     }
