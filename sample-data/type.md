@@ -27,30 +27,53 @@
 
 # MakeConfig {Object}
 
-* make_count `PositiveInteger` This configuration will be use to make
-  `make_count` token pair state set.
-* seed_pair_count `PositiveInteger` Number of seed token pairs will be use to
-  make sample data.
-* pair_specs `Array<MakePairSpec>` List of specifications to create token
-  pairs and it's state. This specification overrides token pairs from seed
-  data which is limit by `seed_pair_count`.
+* seedValue `PositiveInteger` It is use as seed value to random reserve of
+  tokens. If it does not specify then take default as `0x7531246`.
+* seedPairCount `PositiveInteger` Number of seed pairs is use to make token
+  pairs. A seed pair produces 5 pairs on five exchanges, see `ExchagneName`.
+  If it does not specify then all seed pairs is use.
+* pairSpecs `Array<MakePairSpec>` List of specifications to create token
+  pairs and it's state.
 
 # MakePairSpec {Object}
 
-* address_a `EthAddress`
-* address_b `EthAddress`
+* addressA `EthAddress`
+* addressB `EthAddress`
 * exchanges `Array<MakeExchangeSpec>` List of exchanges for token pair.
 
 # MakeExchangeSpec {Object}
 
 * name `ExchangeName`
-* boundary_a `HeximalRandomBoundary`
-* boundary_b `HeximalRandomBoundary`
+* boundaryA `HeximalRandomBoundary`
+* boundaryB `HeximalRandomBoundary`
 
 # HeximalRandomBoundary {Array}
 
 * [0] `HeximalString` Lower boundary.
 * [1] `HeximalString` Upper boundary.
+
+# ValidMakeConfig {Object}
+
+* seedValue `BigNumber` Positive integer.
+* seedPairCount `PositiveInteger`
+* pairSpecs `Array<ValidMakePairSpec>`
+
+# ValidMakePairSpec {Object}
+
+* addressA `EthAddress`
+* addressB `EthAddress`
+* exchanges `Array<ValidMakeExchangeSpec>`
+
+# ValidMakeExchangeSpec {Object}
+
+* name `ExchangeName`
+* boundaryA `UnsignedBigIntRandomBoundary`
+* boundaryB `UnsignedBigIntRandomBoundary`
+
+# UnsignedBigIntRandomBoundary {Array}
+
+* [0] `BigNumber` Lower boundary, unsigned integer.
+* [1] `BigNumber` Upper boundary, unsigned integer.
 
 # TokenPairStateSet {Array<TokenPairState>}
 

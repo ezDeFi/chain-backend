@@ -4,111 +4,23 @@ const assert = require('assert')
 const BigNumber = require('bignumber.js')
 const {
     randomUnsignedBigInt,
-    toDecimal
+    seedRandomUnsignedBigInt
 } = require('../number')
 
 describe('randomUnsignedBigInt', () => {
-    it('min is not a number throws error', () => {
-        assert.throws(
-            () => {
-                randomUnsignedBigInt(null, 0)
-            },
-            {
-                message: 'Invalid boundary values'
-            }
-        )
-    })
-
-    it('max is not a number throws error', () => {
-        assert.throws(
-            () => {
-                randomUnsignedBigInt(0, null)
-            },
-            {
-                message: 'Invalid boundary values'
-            }
-        )
-    })
-
-    it('min is negative throws error', () => {
-        assert.throws(
-            () => {
-                randomUnsignedBigInt(-1, 0)
-            },
-            {
-                message: 'Invalid boundary values'
-            }
-        )
-    })
-
-    it('max is negative throws error', () => {
-        assert.throws(
-            () => {
-                randomUnsignedBigInt(0, -1)
-            },
-            {
-                message: 'Invalid boundary values'
-            }
-        )
-    })
-
-    it('min is float nubmer throws error', () => {
-        assert.throws(
-            () => {
-                randomUnsignedBigInt(1.1, 0)
-            },
-            {
-                message: 'Invalid boundary values'
-            }
-        )
-    })
-
-    it('max is float nubmer throws error', () => {
-        assert.throws(
-            () => {
-                randomUnsignedBigInt(0, 1.1)
-            },
-            {
-                message: 'Invalid boundary values'
-            }
-        )
-    })
-
-    it('max is less than min throws error', () => {
-        assert.throws(
-            () => {
-                randomUnsignedBigInt(3, 2)
-            },
-            {
-                message: 'Invalid boundary values'
-            }
-        )
-    })
-
-    it('max is equal min throws error', () => {
-        assert.throws(
-            () => {
-                randomUnsignedBigInt(3, 3)
-            },
-            {
-                message: 'Invalid boundary values'
-            }
-        )
-    })
-    
     it('call x-small broundary for 10 times', () => {
         let min = 0
         let max = 10
         let seed = 3
-        let expectedResults = ['9', '1', '8', '6', '5', '10', '7', '0', '2']
+        let expectedResults = ['1', '2', '8', '0', '7', '5', '4', '9', '6']
 
-        randomUnsignedBigInt.seed(min, max, seed)
+        seedRandomUnsignedBigInt(seed)
 
         for (let expectedResult of expectedResults) {
             let actualResult = randomUnsignedBigInt(min, max)
 
             assert.strictEqual(
-                toDecimal(actualResult),
+                actualResult.toString(),
                 expectedResult
             )
         }
@@ -119,17 +31,17 @@ describe('randomUnsignedBigInt', () => {
         let max = 1000
         let seed = 4
         let expectedResults = [
-            '317', '177', '444', '765', '584',
-            '498', '263', '679', '349', '914'
+            '415', '858', '417', '435', '232',
+            '369', '676', '167', '151', '832'
         ]
 
-        randomUnsignedBigInt.seed(min, max, seed)
+        seedRandomUnsignedBigInt(seed)
 
         for (let expectedResult of expectedResults) {
-            let actualResult = randomUnsignedBigInt(100, 1000)
+            let actualResult = randomUnsignedBigInt(min, max)
 
             assert.strictEqual(
-                toDecimal(actualResult),
+                actualResult.toString(),
                 expectedResult
             )
         }
@@ -140,20 +52,20 @@ describe('randomUnsignedBigInt', () => {
         let max = '9753186421357924680'
         let seed = 531
         let expectedResults = [
-            '3687917489872042914', '6833823825756397140',
-            '6413888203817604343', '7064001556641361126',
-            '880756339425585433', '8351173561882793419',
-            '2690254269097810631', '4030229737234983492',
-            '9344670941683920971', '2291457882275179576'
+            '26174811202701', '6943370336074993828',
+            '7025045110839898889', '4307297403309822353',
+            '6039075123808900360', '7875256986262292711',
+            '2289136667233274407', '4025068032448585823',
+            '4584429162769904646', '5155316955076360501'
         ]
 
-        randomUnsignedBigInt.seed(min, max, seed)
+        seedRandomUnsignedBigInt(seed)
 
         for (let expectedResult of expectedResults) {
             let actualResult = randomUnsignedBigInt(min, max)
 
             assert.strictEqual(
-                toDecimal(actualResult),
+                actualResult.toString(),
                 expectedResult
             )
         }
@@ -164,7 +76,7 @@ describe('randomUnsignedBigInt', () => {
         let max = new BigNumber('9753186421357924680')
         let seed = 792
 
-        randomUnsignedBigInt.seed(min, max, seed)
+        seedRandomUnsignedBigInt(seed)
 
         for (let count = 1; count <= 10000; ++count) {
             let actualResult = randomUnsignedBigInt(min, max)
