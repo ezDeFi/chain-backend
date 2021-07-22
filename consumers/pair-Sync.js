@@ -64,7 +64,7 @@ module.exports = (key) => {
             await Bluebird.map(Array.from(changes.keys()), async (address) => {
                 const pair = await getState(address)
                 // console.error({address, pair})
-                if (!pair) {
+                if (!pair || pair.liqudity == '0') {
                     return
                 }
                 const { token0, token1 } = pair
@@ -138,13 +138,44 @@ module.exports = (key) => {
 
                 // console.error(s0.toString(), s1.toString(), rs)
 
-                return Bluebird.map(rs, ([address, r0, r1]) => {
+                return Bluebird.map(rs, async ([address, r0, r1]) => {
+                    const value = changes.get(address) || {}
                     // console.error({address, r0, r1})
                     const num = bn(r0).mul(s1)
                     const denom = bn(r1).mul(s0)
                     const direction = num.gt(denom)
                     const deviation = direction ? num.sub(denom) : denom.sub(num)
-                    const value = changes.get(address) || {}
+                    const dv = deviation.mul(bn(1000000)).div(num).toNumber() / 1000000
+                    if (dv > 0.03) {
+                        if (lqs && lqs.length) {
+                            try {
+                                const { swap, token } = lqs[0]
+                                const [ tokenIn, tokenOut ] = token == token0 ? [ token0, token1 ] : [ token1, token0 ]
+                                const [ amountIn, amountOut ] = await context.swapRate(swap, tokenIn, tokenOut)
+                                const [ amount0, amount1 ] = token == token0 ? [ amountIn, amountOut ] : [ amountOut, amountIn ]
+                                const num = amount0.mul(r1)
+                                const denom = amount1.mul(r0)
+                                const lost = denom.sub(num).mul(bn(1000)).div(denom).toNumber() / 1000
+                                console.error({dv, lost})
+                                if (Math.abs(lost) > dv * 2) {
+                                    console.log('BLACKLIST: lost after swapping', address, value)
+                                    value.liquidity = '0'   // mark to ignore
+                                    value.rank = null
+                                    changes.set(address, value)
+                                    return
+                                }
+                            } catch(err) {
+                                if (err.reason && err.reason.endsWith(': K')) {
+                                    console.log('BLACKLIST: failed K pool', address, value)
+                                    value.liquidity = '0'   // mark to ignore
+                                    value.rank = null
+                                    changes.set(address, value)
+                                    return
+                                }
+                                console.error({dv}, err)
+                            }
+                        }
+                    }
                     try {
                         value.rank = deviation.isZero() ? null : num.mul(bn(1000000)).div(deviation).toNumber()
                         value.direction = direction

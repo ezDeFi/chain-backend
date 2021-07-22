@@ -1,10 +1,11 @@
 const _ = require('lodash')
-const { ZERO_ADDRESS } = require('../helpers/constants').hexes
+const { ZERO_ADDRESS, LARGE_VALUE } = require('../helpers/constants').hexes
 const { TOKENS } = require('../helpers/constants').bsc
 const Bluebird = require('bluebird')
 const PairModel = require('../models/PairModel')
 const UniswapV2Router01 = require('../ABIs/UniswapV2Router01.json').abi
 const UniswapV2Pair = require('../ABIs/UniswapV2Pair.json').abi
+const Aggregator = require('../ABIs/Aggregator.json').abi
 const stopwatch = require('../helpers/stopwatch')
 const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
@@ -104,10 +105,11 @@ const sum = (chunks) => chunks.reduce((sum, a) => sum + a, 0)
 const count = (chunks) => chunks.reduce((count, chunk) => count + chunk ? 1 : 0, 0)
 
 function tokenName(address) {
-    const mid = Object.entries(TOKENS).find(([, a]) => a == address)
-    if (mid) {
-        return mid[0]
+    const token = Object.entries(TOKENS).find(([, a]) => a == address)
+    if (token) {
+        return token[0]
     }
+    return address
 }
 
 const CONTRACTS = {
@@ -501,7 +503,61 @@ function createSwapContext({gasPrice, gasToken, getState}) {
         }
     }
 
+    async function swapRate(swap, tokenIn, tokenOut) {
+        try {
+            const router = await getRouterContract(swap)
+            const from = process.env.SWAPPER
+
+            const amount = bn(process.env.SWAP_AMOUNT)
+
+            const aggregator = new ethers.Contract(process.env.AGGREGATOR, Aggregator, provider)
+            if (tokenIn == TOKENS.WBNB) {
+                const amountOuts = await aggregator.callStatic.swap(
+                    TOKENS.BNB,
+                    0,
+                    [{
+                        router: router.address,
+                        amount: 0,
+                        path: [ TOKENS.WBNB, ZERO_ADDRESS ],
+                    }],
+                    tokenOut,
+                    1,
+                    LARGE_VALUE,
+                    { from, value: amount },
+                )
+                console.error(amountOuts.map(a => a.toString()))
+                return [ amountOuts[0], amountOuts[2] ]
+            }
+
+            const amountOuts = await aggregator.callStatic.swap(
+                TOKENS.BNB,
+                0,
+                [{
+                    router: router.address,
+                    amount: 0,
+                    path: [ TOKENS.WBNB, tokenIn ],
+                }, {
+                    router: router.address,
+                    amount: 0,
+                    path: [ tokenIn, ZERO_ADDRESS ],    // swap to tokenOut and send to msg.sender
+                }],
+                tokenOut,
+                1,
+                LARGE_VALUE,
+                { from, value: amount },
+            )
+            console.error(swap, tokenName(tokenIn), tokenName(tokenOut), amountOuts.map(a => a.toString()))
+            return [ amountOuts[1], amountOuts[3] ]
+        } catch(err) {
+            if (!err.reason || !err.reason.endsWith(': K')) {
+                console.error(swap, tokenName(tokenIn), tokenName(tokenOut), err)
+            }
+            throw err
+        }
+    }
+
     return {
+        swapRate,
         getPairReserves,
         getAmountOut,
         findPath,
