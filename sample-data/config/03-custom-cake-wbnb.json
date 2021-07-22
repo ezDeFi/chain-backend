@@ -1,0 +1,36 @@
+{
+    "make_count": 3,
+    "pair_specs": [
+        {
+            "address_a": "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
+            "address_b": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+            "exchanges": [
+                {
+                    "name": "pancake",
+                    "boundary_a": ["13579864abc", "135798645def"],
+                    "boundary_b": ["97531246abc", "975312467def"]
+                },
+                {
+                    "name": "pancake2",
+                    "boundary_a": ["1357986420abc", "13579864200def"],
+                    "boundary_b": ["9753124680abc", "97531246800def"]
+                },
+                {
+                    "name": "bakery",
+                    "boundary_a": ["135798abc", "1357980def"],
+                    "boundary_b": ["975312abc", "9753120def"]
+                },
+                {
+                    "name": "jul",
+                    "boundary_a": ["1357abc", "13570def"],
+                    "boundary_b": ["9753abc", "97530def"]
+                },
+                {
+                    "name": "ape",
+                    "boundary_a": ["135abc", "1350def"],
+                    "boundary_b": ["975abc", "9750def"]
+                }
+            ]
+        }
+    ]
+}
