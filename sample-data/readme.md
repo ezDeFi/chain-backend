@@ -41,13 +41,12 @@ function listPairStateMap() {}
 //  * name {String} Name of dataset that can be retrieve by
 //    `listPairStateMap()`.
 //
-//
 // Output {Map<key, value>}
 //  * key {EthAddress}
 //  * value {Object}
-//  * value.address {String} Address of token pair.
-//  * value.reserve0 {HeximalString}
-//  * value.reserve1 {HeximalString}
+//  * value.address {String} ETH address of token pair as heximal string.
+//  * value.reserve0 {String} Reserve of token0 as heximal string.
+//  * value.reserve1 {String}
 function readPairStateMap() {}
 ```
 
@@ -83,8 +82,9 @@ let state = data.get('6BE969fa4c9AcE0D62825d9Cd6609925Ea7CebCE')
 
 * **make_count** `{Number}` Number of datasets will be make from this
   configuration.
-* **seed_pair_count** `{Number}` Number of token pair states will be include
-  to results.
+* **seed_pair_count** `{Number}` Number of seed pairs to be include as
+  results. A seed pair produces 5 pairs on five exchanges. There are 5000 seed
+  pairs. If this attritute does not specify then all seed pairs is use.
 * **pair_specs** `{Array<Object>}` List of token pair and specification to
   make sample data.
 * **pair_specs[].address_a** `{String}` ETH address of a token. It could be
