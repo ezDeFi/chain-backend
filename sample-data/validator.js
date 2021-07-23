@@ -17,7 +17,7 @@ class MakeConfigError extends Error {
 }
 
 // Descriptions
-//  * Check configuration is valid or not and return error.
+//  * Check configurations then convert to valid types.
 //
 // Input
 //  * config {MakeConfig}
@@ -27,7 +27,7 @@ class MakeConfigError extends Error {
 // Error
 //  * MakeConfigError `seedPairCount`
 //  * MakeConfigError `seedValue`
-//  * MakeConfigError `pairSpec[]*`
+//  * MakeConfigError `pairSpecs[]*`
 function standardizeMakeConfig(config) {
     let seedPairCount = _standardizeSeedPairCount(config.seedPairCount)
 
@@ -100,7 +100,7 @@ function _standardizeSeedValue(rawValue) {
     
     let value = new BigNumber(rawValue)
 
-    if (value.isNaN() || !value.isInteger() || value.lte(0)) {
+    if (!value.isInteger() || value.lte(0)) {
         return {error: 'Not a positive integer'}
     }
 
@@ -254,13 +254,13 @@ function _standardizeHeximalRandomBoundary(boundary) {
 
     let lower = new BigNumber(boundary[0], 16)
 
-    if (lower.isNaN() || !lower.isInteger() || lower.isNegative()) {
+    if (!lower.isInteger() || lower.isNegative()) {
         return {errorPath: '[0]', error: 'Not an unsigned integer'}
     }
 
     let upper = new BigNumber(boundary[1], 16)
 
-    if (upper.isNaN() || !upper.isInteger() || upper.isNegative()) {
+    if (!upper.isInteger() || upper.isNegative()) {
         return {errorPath: '[1]', error: 'Not an unsigned integer'}
     }
 

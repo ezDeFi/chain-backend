@@ -5,7 +5,6 @@ const BigNumber = require('bignumber.js')
 // Input
 //  * min {Number | DecimalString | BigNumber} Non negative integer.
 //  * max {Number | DecimalString | BigNumber}
-//  * base {Number} Input based.
 //
 // Output {BigNumber}
 //

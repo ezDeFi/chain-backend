@@ -16,9 +16,11 @@ const {getDb, MakeConfigError} = require('./sample-data')
 //
 // Input
 //  * config {Object}
-//  * config.seedValue {Number} It is use as seed value to random
+//  * config.seedValue {Number | String} It is use as seed value to random
 //    reserve of tokens. If it does not specify then take default as `0x7531246`.
+//    It is postivie integer.
 //  * config.seedPairCount {Number} Number of seed pairs is use to make token.
+//    It is unsigned integer.
 //  * config.pairSpecs {Array<Object>} Each seed pairs produces 5 pairs on
 //    five exchanges, include: `pancake`, `pancake2`, `bakery`, `jul` and `ape`.
 //    If it does not specify then all seed pairs is use.

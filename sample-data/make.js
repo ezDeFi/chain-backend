@@ -13,11 +13,11 @@ const {standardizeMakeConfig} = require('./validator')
 //  * Make token pair state set from configuration.
 //
 // Input
-//  * config {RawMakeConfig}
+//  * config {MakeConfig}
 //
 // Output {Map<key, value>}
 //  * key {EthAddress}
-//  * value {TokenPairState}
+//  * value {TokenPair}
 //
 // Errors
 //  * MakeConfigError
@@ -41,15 +41,15 @@ function make(config) {
 // Descriptions
 //  * Return list of token pair specifications to make that includes:
 //  * Seed token pairs from file `./seed-pair-state`.
-//  * If there is the same token pair from `specs` and seed data then
-//    specification from `specs` is pick.
+//  * If there is the same token pair from `specs` and seed pairs then
+//    specification from `specs` will be pick.
 //
 // Input
-//  * specs {Array<MakePairSpec>}
+//  * specs {Array<ValidMakePairSpec>}
 //  * seedPairCount {UnsignedInteger} Number of seed pairs will be include to
 //    results.
 //
-// Output {Array<MakePairSpec>}
+// Output {Array<ValidMakePairSpec>}
 function _mergeWithSeedPairSpecs(specs, seedPairCount) {
     let seedPairs = _getSeedPairs(seedPairCount)
     let seedPairMap = new Map(
@@ -70,10 +70,10 @@ function _mergeWithSeedPairSpecs(specs, seedPairCount) {
     )
 }
 
-// Input 
+// Input
 //  * spec {ValidMakePairSpec}
 //
-// Output {Array<TokenPairState>}
+// Output {Array<TokenPair>}
 function _makePairFromSpec({addressA, addressB, exchanges}) {
     return exchanges.map(exchange => {
         return _makePairFromExchangeSpec(
@@ -93,7 +93,7 @@ function _makePairFromSpec({addressA, addressB, exchanges}) {
 //  * boundaryA {UnsignedBigIntRandomBoundary}
 //  * boundaryB {UnsignedBigIntRandomBoundary}
 //
-// Output {TokenPairState}
+// Output {TokenPair}
 function _makePairFromExchangeSpec(
     addressA, 
     addressB, 
@@ -160,10 +160,10 @@ function _getOrderedAddresses(tokenA, tokenB) {
 }
 
 // Descriptions
-//  * Create token pair specification to make from seed state.
+//  * Create token pair specification to make from seed pair.
 //
 // Input
-//  * pair {SeedPairState}
+//  * pair {SeedPair}
 //
 // Output {ValidMakePairSpec}
 function _makePairSpecFromSeedPair(pair) {
@@ -238,13 +238,13 @@ function _makePairSpecFromSeedPair(pair) {
 //  * count {Number} Number of states to get. If it does not specify then
 //    return all pair states.
 //
-// Output {Array<SeedPairState>}
+// Output {Array<SeedPair>}
 //
 // Errors
 //  * Error `Not enough seed pair states`
 function _getSeedPairs(count=undefined) {
     if (!_getSeedPairs._pairStates) {
-        _getSeedPairs._pairStates = _readSeedPairStates()
+        _getSeedPairs._pairStates = _readSeedPairs()
     }
 
     if (count === undefined) {
@@ -258,12 +258,12 @@ function _getSeedPairs(count=undefined) {
     return _getSeedPairs._pairStates.slice(0, count)
 }
 
-// Array<SeedPairState>
+// Array<SeedPair>
 _getSeedPairs._pairStates = undefined
 
-// Output {Array<SeedPairState>}
-function _readSeedPairStates() {
-    let rawData = fs.readFileSync(_readSeedPairStates._DATA_FILE)
+// Output {Array<SeedPair>}
+function _readSeedPairs() {
+    let rawData = fs.readFileSync(_readSeedPairs._DATA_FILE)
     let rows = csvParse(rawData, {
         cast: false,
         columns: true
@@ -273,7 +273,7 @@ function _readSeedPairStates() {
 }
 
 // {String} Path to file that contains seed token pair states.
-_readSeedPairStates._DATA_FILE = path.join(__dirname, 'seed-pair-state')
+_readSeedPairs._DATA_FILE = path.join(__dirname, 'seed-pair-state')
 
 // Input
 //  * addressA {EthAddress}

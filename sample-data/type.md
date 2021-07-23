@@ -55,7 +55,7 @@
 # ValidMakeConfig {Object}
 
 * seedValue `BigNumber` Positive integer.
-* seedPairCount `PositiveInteger`
+* seedPairCount `UnsignedInteger`
 * pairSpecs `Array<ValidMakePairSpec>`
 
 # ValidMakePairSpec {Object}
@@ -75,15 +75,16 @@
 * [0] `BigNumber` Lower boundary, unsigned integer.
 * [1] `BigNumber` Upper boundary, unsigned integer.
 
-# TokenPairStateSet {Array<TokenPairState>}
-
-# TokenPairState {Object}
+# TokenPair {Object}
 
 * address `EthAddress`
-* reserve0 `BigNumber`
-* reserve1 `BigNumber`
+* factory `ExchangeName`
+* token0 `EthAddress`
+* token1 `EthAddress`
+* reserve0 `HeximalString`
+* reserve1 `HeximalString`
 
-# SeedPairState {Array<Object>}
+# SeedPair {Array<Object>}
 
 * [].address0 `EthAddress`
 * [].address1 `EthAddress`
