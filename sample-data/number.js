@@ -33,7 +33,7 @@ function seedRandomUnsignedBigInt(value) {
         throw Error('Invalid seed value')
     }
 
-    randomUnsignedBigInt._seedValue = bigValue
+    _randomUnsignedBigInt._seedValue = bigValue.pow(2).plus(bigValue)
 }
 
 // Input
@@ -93,5 +93,5 @@ function _divToRemainer(dividend, divisor) {
 
 module.exports = {
     randomUnsignedBigInt,
-    seedRandomUnsignedBigInt
+    seedRandomUnsignedBigInt,
 }

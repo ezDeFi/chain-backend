@@ -58,6 +58,18 @@ function standardizeMakeConfig(config) {
 }
 
 // Input
+//  * value {String} String with of with out prefix `0x`.
+//
+// Output {String} A string without prefix `0x`, lowercase.
+function _standardizeHeximalString(value) {
+    let prefix = value.slice(0, 2)
+
+    return prefix === '0x' 
+        ? value.slice(2).toLowerCase() 
+        : value.toLowerCase()
+}
+
+// Input
 //  * rawValue {Number}
 //
 // Output {Object} 
@@ -152,8 +164,8 @@ function _standardizePairSpec(rawSpec) {
 
     return {
         value: {
-            addressA: _removeHeximalPrefix(rawSpec.addressA).toLowerCase(),
-            addressB: _removeHeximalPrefix(rawSpec.addressB).toLowerCase(),
+            addressA: _standardizeHeximalString(rawSpec.addressA),
+            addressB: _standardizeHeximalString(rawSpec.addressB),
             exchanges: exchanges.value
         }
     }
@@ -265,16 +277,6 @@ function _standardizeHeximalRandomBoundary(boundary) {
 }
 
 // Input
-//  * value {String} String with of with out prefix `0x`.
-//
-// Output {String} A string without prefix `0x`.
-function _removeHeximalPrefix(value) {
-    let prefix = value.slice(0, 2)
-
-    return prefix === '0x' ? value.slice(2) : value
-}
-
-// Input
 //  * name {String}
 //
 // Output
@@ -294,5 +296,5 @@ _isValidExchangeName._exchangeSet = new Set([
 ])
 
 module.exports = {
-    standardizeMakeConfig
+    standardizeMakeConfig,
 }

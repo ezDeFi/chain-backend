@@ -4,6 +4,7 @@ const path = require('path')
 const fs = require('fs')
 const BigNumber = require('bignumber.js')
 const csvParse = require('csv-parse/lib/sync')
+const ethers = require('ethers')
 const {findPair} = require('bsc_util')
 const {randomUnsignedBigInt, seedRandomUnsignedBigInt} = require('./number')
 const {standardizeMakeConfig} = require('./validator')
@@ -23,7 +24,7 @@ const {standardizeMakeConfig} = require('./validator')
 function make(config) {
     let {pairSpecs, seedPairCount, seedValue} = standardizeMakeConfig(config)
 
-    if (seedValue) {
+    if (seedValue !== undefined) {
         seedRandomUnsignedBigInt(seedValue)
     }
 
@@ -109,7 +110,14 @@ function _makePairFromExchangeSpec(
     let reserve0 = randomUnsignedBigInt(...boundary0)
     let reserve1 = randomUnsignedBigInt(...boundary1)
 
-    return {address, exchange, address0, address1, reserve0, reserve1}
+    return {
+        address: address, 
+        factory: exchange, 
+        token0: ethers.utils.getAddress(address0), 
+        token1: ethers.utils.getAddress(address1), 
+        reserve0: reserve0, 
+        reserve1: reserve1
+    }
 }
 
 // Input

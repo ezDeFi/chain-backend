@@ -7,8 +7,7 @@
     "watch": "nodemon ./bin/www",
     "rsync": "rsync -urtvL --delete -e ssh --exclude=.env.local --exclude=node_modules --exclude=package-lock.json --exclude=.git ./",
     "test": "nyc _mocha --timeout 10000 --exit --report lcovonly -- -R spec",
-    "test-sample-data": "mocha sample-data/test/",
-    "make-sample-data": "node sample-data/bin/make.js",
+    "test-sample-data": "mocha sample-data/test/ --timeout 60000",
     "lint": "eslint --fix --config .eslintrc.json \"**/*.js\""
   },
   "dependencies": {
