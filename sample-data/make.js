@@ -115,8 +115,8 @@ function _makePairFromExchangeSpec(
         factory: exchange, 
         token0: ethers.utils.getAddress(address0), 
         token1: ethers.utils.getAddress(address1), 
-        reserve0: reserve0, 
-        reserve1: reserve1
+        reserve0: reserve0.toString(16), 
+        reserve1: reserve1.toString(16)
     }
 }
 

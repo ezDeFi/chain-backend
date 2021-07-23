@@ -132,6 +132,7 @@ describe('make', () => {
 
     it('make exchange pancake', () => {
         let config = {
+            seedValue: 0x13542,
             seedPairCount: 0,
             pairSpecs: [
                 {
@@ -152,22 +153,19 @@ describe('make', () => {
         assert.strictEqual(pairMap instanceof Map, true)
         assert.strictEqual(pairMap.size, 1)
 
-        let pairs = Array.from(
-            pairMap.values()
-        )
+        let pair = pairMap.values().next().value
 
-        for (let pair of pairMap.values()) {
-            assert.strictEqual(pair.address, '0xA527a61703D82139F8a06Bc30097cC9CAA2df5A6')
-            assert.strictEqual(pair.factory, 'pancake')
-            assert.strictEqual(pair.token0, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c')
-            assert.strictEqual(pair.token1, '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82')
-            assert.strictEqual(pair.reserve0 instanceof BigNumber, true)
-            assert.strictEqual(pair.reserve1 instanceof BigNumber, true)
-        }
+        assert.strictEqual(pair.address, '0xA527a61703D82139F8a06Bc30097cC9CAA2df5A6')
+        assert.strictEqual(pair.factory, 'pancake')
+        assert.strictEqual(pair.token0, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c')
+        assert.strictEqual(pair.token1, '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82')
+        assert.strictEqual(pair.reserve0, '3e30d926ed')
+        assert.strictEqual(pair.reserve1, '2c63db2a8c3')
     })
 
     it('make exchange pancake2', () => {
         let config = {
+            seedValue: 0x13542,
             seedPairCount: 0,
             pairSpecs: [
                 {
@@ -188,22 +186,19 @@ describe('make', () => {
         assert.strictEqual(pairMap instanceof Map, true)
         assert.strictEqual(pairMap.size, 1)
 
-        let pairs = Array.from(
-            pairMap.values()
-        )
+        let pair = pairMap.values().next().value
 
-        for (let pair of pairs) {
-            assert.strictEqual(pair.address, '0x0eD7e52944161450477ee417DE9Cd3a859b14fD0')
-            assert.strictEqual(pair.factory, 'pancake2')
-            assert.strictEqual(pair.token0, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c')
-            assert.strictEqual(pair.token1, '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82')
-            assert.strictEqual(pair.reserve0 instanceof BigNumber, true)
-            assert.strictEqual(pair.reserve1 instanceof BigNumber, true)
-        }
+        assert.strictEqual(pair.address, '0x0eD7e52944161450477ee417DE9Cd3a859b14fD0')
+        assert.strictEqual(pair.factory, 'pancake2')
+        assert.strictEqual(pair.token0, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c')
+        assert.strictEqual(pair.token1, '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82')
+        assert.strictEqual(pair.reserve0 , '3e30d926ed')
+        assert.strictEqual(pair.reserve1 , '2c63db2a8c3')
     })
 
     it('make exchange bakery', () => {
         let config = {
+            seedValue: 0x13542,
             seedPairCount: 0,
             pairSpecs: [
                 {
@@ -224,22 +219,19 @@ describe('make', () => {
         assert.strictEqual(pairMap instanceof Map, true)
         assert.strictEqual(pairMap.size, 1)
 
-        let pairs = Array.from(
-            pairMap.values()
-        )
+        let pair = pairMap.values().next().value
 
-        for (let pair of pairs) {
-            assert.strictEqual(pair.address, '0x65E9CfDBC579856B6354d369AFBFbA2B2a3C7856')
-            assert.strictEqual(pair.factory, 'bakery')
-            assert.strictEqual(pair.token0, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c')
-            assert.strictEqual(pair.token1, '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82')
-            assert.strictEqual(pair.reserve0 instanceof BigNumber, true)
-            assert.strictEqual(pair.reserve1 instanceof BigNumber, true)
-        }
+        assert.strictEqual(pair.address, '0x65E9CfDBC579856B6354d369AFBFbA2B2a3C7856')
+        assert.strictEqual(pair.factory, 'bakery')
+        assert.strictEqual(pair.token0, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c')
+        assert.strictEqual(pair.token1, '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82')
+        assert.strictEqual(pair.reserve0 , '3e30d926ed')
+        assert.strictEqual(pair.reserve1 , '2c63db2a8c3')
     })
 
     it('make exchange jul', () => {
         let config = {
+            seedValue: 0x13542,
             seedPairCount: 0,
             pairSpecs: [
                 {
@@ -260,22 +252,19 @@ describe('make', () => {
         assert.strictEqual(pairMap instanceof Map, true)
         assert.strictEqual(pairMap.size, 1)
 
-        let pairs = Array.from(
-            pairMap.values()
-        )
+        let pair = pairMap.values().next().value
 
-        for (let pair of pairs) {
-            assert.strictEqual(pair.address, '0x0bf693a8679eFB36Ac912c147A75e19368A33CDA')
-            assert.strictEqual(pair.factory, 'jul')
-            assert.strictEqual(pair.token0, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c')
-            assert.strictEqual(pair.token1, '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82')
-            assert.strictEqual(pair.reserve0 instanceof BigNumber, true)
-            assert.strictEqual(pair.reserve1 instanceof BigNumber, true)
-        }
+        assert.strictEqual(pair.address, '0x0bf693a8679eFB36Ac912c147A75e19368A33CDA')
+        assert.strictEqual(pair.factory, 'jul')
+        assert.strictEqual(pair.token0, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c')
+        assert.strictEqual(pair.token1, '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82')
+        assert.strictEqual(pair.reserve0, '3e30d926ed')
+        assert.strictEqual(pair.reserve1, '2c63db2a8c3')
     })
 
     it('make exchange ape', () => {
         let config = {
+            seedValue: 0x13542,
             seedPairCount: 0,
             pairSpecs: [
                 {
@@ -296,18 +285,14 @@ describe('make', () => {
         assert.strictEqual(pairMap instanceof Map, true)
         assert.strictEqual(pairMap.size, 1)
 
-        let pairs = Array.from(
-            pairMap.values()
-        )
+        let pair = pairMap.values().next().value
 
-        for (let pair of pairs) {
-            assert.strictEqual(pair.address, '0x60593Abea55e9Ea9d31c1b6473191cD2475a720D')
-            assert.strictEqual(pair.factory, 'ape')
-            assert.strictEqual(pair.token0, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c')
-            assert.strictEqual(pair.token1, '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82')
-            assert.strictEqual(pair.reserve0 instanceof BigNumber, true)
-            assert.strictEqual(pair.reserve1 instanceof BigNumber, true)
-        }
+        assert.strictEqual(pair.address, '0x60593Abea55e9Ea9d31c1b6473191cD2475a720D')
+        assert.strictEqual(pair.factory, 'ape')
+        assert.strictEqual(pair.token0, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c')
+        assert.strictEqual(pair.token1, '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82')
+        assert.strictEqual(pair.reserve0, '3e30d926ed')
+        assert.strictEqual(pair.reserve1, '2c63db2a8c3')
     })
 
     it('make with 1000 seed pairs', () => {
@@ -336,17 +321,31 @@ describe('make', () => {
         assert.strictEqual(pairMap instanceof Map, true)
         assert.strictEqual(pairMap.size, 4996)
 
-        let pairs = Array.from(
-            pairMap.values()
-        )
+        let it = pairMap.values()
 
-        for (let pair of pairs) {
+        for (
+            let pair = it.next().value;
+            pair !== undefined; 
+            pair = it.next().value
+        ) {
             assert.strictEqual(ethers.utils.isAddress(pair.address), true)
             assert.strictEqual(exchangeNameSet.has(pair.factory), true)
             assert.strictEqual(ethers.utils.isAddress(pair.token0), true)
             assert.strictEqual(ethers.utils.isAddress(pair.token1), true)
-            assert.strictEqual(pair.reserve0 instanceof BigNumber, true)
-            assert.strictEqual(pair.reserve1 instanceof BigNumber, true)
+            assert.strictEqual(typeof pair.reserve0, 'string')
+            assert.strictEqual(typeof pair.reserve1, 'string')
+
+            let r0 = new BigNumber(pair.reserve0, 16)
+            let r1 = new BigNumber(pair.reserve1, 16)
+
+            assert.strictEqual(
+                r0.isInteger() && r0.gte(0), 
+                true
+            )
+            assert.strictEqual(
+                r1.isInteger() && r1.gte(0), 
+                true
+            )
         }
     })
 
@@ -375,17 +374,31 @@ describe('make', () => {
         assert.strictEqual(pairMap instanceof Map, true)
         assert.strictEqual(pairMap.size, 49996)
 
-        let pairs = Array.from(
-            pairMap.values()
-        )
+        let it = pairMap.values()
 
-        for (let pair of pairs) {
+        for (
+            let pair = it.next().value;
+            pair !== undefined; 
+            pair = it.next().value
+        ) {
             assert.strictEqual(ethers.utils.isAddress(pair.address), true)
             assert.strictEqual(exchangeNameSet.has(pair.factory), true)
             assert.strictEqual(ethers.utils.isAddress(pair.token0), true)
             assert.strictEqual(ethers.utils.isAddress(pair.token1), true)
-            assert.strictEqual(pair.reserve0 instanceof BigNumber, true)
-            assert.strictEqual(pair.reserve1 instanceof BigNumber, true)
+            assert.strictEqual(typeof pair.reserve0, 'string')
+            assert.strictEqual(typeof pair.reserve1, 'string')
+
+            let r0 = new BigNumber(pair.reserve0, 16)
+            let r1 = new BigNumber(pair.reserve1, 16)
+
+            assert.strictEqual(
+                r0.isInteger() && r0.gte(0), 
+                true
+            )
+            assert.strictEqual(
+                r1.isInteger() && r1.gte(0), 
+                true
+            )
         }
     })
 
@@ -415,17 +428,31 @@ describe('make', () => {
         assert.strictEqual(pairMap instanceof Map, true)
         assert.strictEqual(pairMap.size, 4996)
 
-        let pairs = Array.from(
-            pairMap.values()
-        )
+        let it = pairMap.values()
 
-        for (let pair of pairs) {
+        for (
+            let pair = it.next().value;
+            pair !== undefined; 
+            pair = it.next().value
+        ) {
             assert.strictEqual(ethers.utils.isAddress(pair.address), true)
             assert.strictEqual(exchangeNameSet.has(pair.factory), true)
             assert.strictEqual(ethers.utils.isAddress(pair.token0), true)
             assert.strictEqual(ethers.utils.isAddress(pair.token1), true)
-            assert.strictEqual(pair.reserve0 instanceof BigNumber, true)
-            assert.strictEqual(pair.reserve1 instanceof BigNumber, true)
+            assert.strictEqual(typeof pair.reserve0, 'string')
+            assert.strictEqual(typeof pair.reserve1, 'string')
+
+            let r0 = new BigNumber(pair.reserve0, 16)
+            let r1 = new BigNumber(pair.reserve1, 16)
+
+            assert.strictEqual(
+                r0.isInteger() && r0.gte(0), 
+                true
+            )
+            assert.strictEqual(
+                r1.isInteger() && r1.gte(0), 
+                true
+            )
         }
     })
 })

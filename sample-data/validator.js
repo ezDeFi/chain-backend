@@ -297,4 +297,5 @@ _isValidExchangeName._exchangeSet = new Set([
 
 module.exports = {
     standardizeMakeConfig,
+    MakeConfigError
 }
