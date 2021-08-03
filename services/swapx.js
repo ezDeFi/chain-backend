@@ -527,9 +527,10 @@ function createSwapContext({gasPrice, gasToken, getState}) {
                     tokenOut,
                     1,
                     LARGE_VALUE,
+                    '0x1000000000000000000000000000000000000000000000000000000000000001',
                     { from, value: amount },
                 )
-                console.error(amountOuts.map(a => a.toString()))
+                console.error(swap, tokenName(tokenIn), tokenName(tokenOut), amountOuts.map(a => a.toString()))
                 return [ amountOuts[0], amountOuts[2] ]
             }
 
@@ -548,6 +549,7 @@ function createSwapContext({gasPrice, gasToken, getState}) {
                 tokenOut,
                 1,
                 LARGE_VALUE,
+                '0x1000000000000000000000000000000000000000000000000000000000000011',
                 { from, value: amount },
             )
             console.error(swap, tokenName(tokenIn), tokenName(tokenOut), amountOuts.map(a => a.toString()))
@@ -559,9 +561,164 @@ function createSwapContext({gasPrice, gasToken, getState}) {
             throw err
         }
     }
+    
+    async function updateRank(addresses) {
+        const changes = new Map()
+
+        await Bluebird.map(addresses, async (address) => {
+            const pair = await getState(address)
+            // console.error({address, pair})
+            if (!pair || pair.liquidity == '0') {
+                return
+            }
+            const { token0, token1 } = pair
+            if (!token0 || !token1) {
+                return
+            }
+            // console.error({token0, token1})
+
+            const rs = await Bluebird
+                .map(Object.keys(SERVICES), async swap => {
+                    const address = bscUtil.findPair(swap, token0, token1)
+                    const pair = await getState(address)
+                    if (pair && pair.reserve0 && pair.reserve1) {
+                        // console.error({address, pair})
+                        return [ address, pair.reserve0, pair.reserve1 ]
+                    }
+                })
+                .filter(r => !!r)
+            
+            // console.error({rs})
+
+            if (!rs.length) {
+                // ingore uninterested pair reserves
+                return
+            }
+
+            if (rs.length == 1) {
+                const [address] = rs[0]
+                const pair = changes.get(address) || {}
+                pair.rank = null
+                pair.liquidity = null
+                changes.set(address, pair)
+                return
+            }
+
+            const lqs = await Bluebird
+                .map([[token0, pair.reserve0], [token1, pair.reserve1]], ([token, r]) => {
+                    return Bluebird.map(Object.keys(SERVICES), async swap => {
+                        if (token == TOKENS.WBNB) return
+                        const riro = await getPairReserves(swap, token, TOKENS.WBNB)
+                        if (!riro || !riro.length) return
+                        const [ri, ro] = riro
+                        return {
+                            swap,
+                            token,
+                            amount: bn(r).mul(bn(ro)).div(bn(ri)),
+                        }
+                    })
+                })
+                .then(_.flatten)
+                .filter(lq => !!lq)
+
+            if (lqs && lqs.length) {
+                // console.error(lqs.map(lq => ({...lq, amount: lq.amount.toString()})))
+                const avg = lqs.reduce((sum, lq) => sum.add(lq.amount), bn(0)).div(bn(lqs.length))
+                // console.error(address, lqs.length, avg.toString())
+                pair.liquidity = avg.toString()
+                changes.set(address, pair)
+            } else {
+                pair.liquidity = null
+                changes.set(address, pair)
+                return
+            }
+
+            const [s0, s1] = rs.reduce(([s0, s1], [, r0, r1]) => {
+                return [
+                    s0.add(bn(r0)),
+                    s1.add(bn(r1)),
+                ]
+            }, [bn(0), bn(0)])
+
+            // console.error(s0.toString(), s1.toString(), rs)
+
+            return Bluebird.map(rs, async ([address, r0, r1]) => {
+                const pair = changes.get(address) || {}
+                // console.error({address, r0, r1})
+                const num = bn(r0).mul(s1)
+                const denom = bn(r1).mul(s0)
+                const direction = num.gt(denom)
+                const deviation = direction ? num.sub(denom) : denom.sub(num)
+                const dv = deviation.mul(bn(1000000)).div(num).toNumber() / 1000000
+                if (dv < 0.03) {
+                    pair.rank = null
+                    changes.set(address, pair)
+                    return
+                }
+
+                try {
+                    const { token0, token1, reserve0, reserve1 } = await getState(address)
+                    const { swap, token } = lqs[0]
+                    const [[in0, out1], [in1, out0]] = await Bluebird.map([[token0, token1], [token1, token0]],
+                        ([tokenIn, tokenOut]) => swapRate(swap, tokenIn, tokenOut)
+                    )
+                    console.error({in0, out1, in1, out0})
+                    const forward = out1.mul(reserve0).mul(bn(1000000)).div(in0).div(reserve1).toNumber() / 1000000
+                    const backward = out0.mul(reserve1).mul(bn(1000000)).div(in1).div(reserve0).toNumber() / 1000000
+                    console.error({forward, backward})
+
+                    // const [ a, b ] = await context.swapRate(swap, token0, token1)
+
+                    // const [ tokenIn, tokenOut ] = token == token0 ? [ token0, token1 ] : [ token1, token0 ]
+                    // const [ amountIn, amountOut ] = await context.swapRate(swap, tokenIn, tokenOut)
+                    // const [ amount0, amount1 ] = token == token0 ? [ amountIn, amountOut ] : [ amountOut, amountIn ]
+                    // const num = amount0.mul(r1)
+                    // const denom = amount1.mul(r0)
+                    // const lost = denom.sub(num).mul(bn(1000)).div(denom).toNumber() / 1000
+                    // console.error({dv, lost})
+                    // if (Math.abs(lost) > dv * 2) {
+                    //     console.log('BLACKLIST: lost after swapping', address, value)
+                    //     value.liquidity = '0'   // mark to ignore
+                    //     value.rank = null
+                    //     changes.set(address, value)
+                    //     return
+                    // }
+                } catch(err) {
+                    if (err.reason && err.reason.endsWith(': K')) {
+                        console.log('BLACKLIST: failed K pool', address, pair)
+                        pair.liquidity = '0'   // mark to ignore
+                        pair.rank = null
+                        changes.set(address, pair)
+                        return
+                    }
+                    console.error({dv}, err)
+                }
+
+                try {
+                    pair.rank = deviation.isZero() ? null : num.mul(bn(1000000)).div(deviation).toNumber()
+                    pair.direction = direction
+                } catch(err) {
+                    console.error(err)
+                    pair.rank = null
+                }
+                // console.error({address, value})
+                changes.set(address, pair)
+            })
+
+            // console.error(num.toString(), denom.toString(), delta.toString(), rank.toString())
+
+            // console.error({rs, s0: s0.toString(), s1: s1.toString()})
+        })
+
+        // console.error({changes})
+
+        await Bluebird.map(changes.entries(),
+            ([address, value]) => PairModel.updateOne({ address }, value, { upsert: true })
+        )
+    }
 
     return {
-        getState,
+        updateRank,
         swapRate,
         getPairReserves,
         getAmountOut,
