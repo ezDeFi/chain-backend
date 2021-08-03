@@ -146,14 +146,9 @@ function timelapse(name) {
 //  * Error `Task is not a function or promise`
 async function _executeTask(task) {
     if (typeof task === 'function') {
-        return await task()
+        return task()
     }
-    else if (task instanceof Promise) {
-        return await task
-    }
-    else {
-        throw Error('Task is not a function or promise')
-    }
+    return task
 }
 
 module.exports = {
