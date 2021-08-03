@@ -186,22 +186,22 @@ function hopsGas(hops) {
     return hops * 120000
 }
 
-const cacheState = {}
-async function getStateDB(address) {
-    if (cacheState.hasOwnProperty(address)) {
-        return cacheState[address]
-    }
-    const value = await stopwatch.watch(
-        PairModel.findOne({
-            updatedAt: { $gte: new Date(new Date().getTime()-STALE_MILIS).toISOString() },
-            address,
-        }).lean(),
-        'database',
-    )
-    return cacheState[address] = value
-}
-
 function createSwapContext({gasPrice, gasToken, getState}) {
+    const cacheState = {}
+    async function getStateDB(address) {
+        if (cacheState.hasOwnProperty(address)) {
+            return cacheState[address]
+        }
+        const value = await stopwatch.watch(
+            PairModel.findOne({
+                updatedAt: { $gte: new Date(new Date().getTime()-STALE_MILIS).toISOString() },
+                address,
+            }).lean(),
+            'database',
+        )
+        return cacheState[address] = value
+    }
+
     gasPrice = bn(gasPrice || '5'+'0'.repeat(9))
     gasToken = ethers.utils.getAddress(gasToken || TOKENS.WBNB)
     getState = getState || getStateDB
@@ -561,6 +561,7 @@ function createSwapContext({gasPrice, gasToken, getState}) {
     }
 
     return {
+        getState,
         swapRate,
         getPairReserves,
         getAmountOut,
