@@ -39,3 +39,10 @@ exports.bsc = {
 		BNB: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
 	},
 }
+
+const HOUR_MILIS = 1000 * 60 * 60
+
+exports.time = {
+	HOUR_MILIS,
+	STALE_MILIS: HOUR_MILIS * 24,
+}

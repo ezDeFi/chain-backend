@@ -9,6 +9,7 @@ const Bluebird = require('bluebird')
 const { SERVICES, createSwapContext } = require('../services/swapx')
 const bn = ethers.BigNumber.from
 const bscUtil = require('bsc_util')
+const { STALE_MILIS } = require('../helpers/constants').time
 
 module.exports = (key) => {
     // reset the state
@@ -46,7 +47,10 @@ module.exports = (key) => {
                 if (cacheState.has(address)) {
                     return cacheState.get(address)
                 }
-                const value = await PairModel.findOne({ address }).lean()
+                const value = await PairModel.findOne({
+                    updatedAt: { $gte: new Date(new Date().getTime()-STALE_MILIS).toISOString() },
+                    address,
+                }).lean()
                 if (!value) {
                     return
                 }

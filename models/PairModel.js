@@ -20,6 +20,6 @@ var PairSchema = new Schema({
     token1:     { type: String, required: false },
     reserve0:   { type: String, required: false },
     reserve1:   { type: String, required: false },
-}, { timestamps: false });
+}, { timestamps: true });
 
 module.exports = mongoose.model("Pair", PairSchema);

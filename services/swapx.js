@@ -12,6 +12,7 @@ mongoose.set("useFindAndModify", false);
 const { ethers } = require('ethers')
 const bn = ethers.BigNumber.from
 const bscUtil = require('bsc_util')
+const { STALE_MILIS } = require('../helpers/constants').time
 
 var provider
 function getProvider() {
@@ -191,7 +192,10 @@ async function getStateDB(address) {
         return cacheState[address]
     }
     const value = await stopwatch.watch(
-        PairModel.findOne({ address }).lean(),
+        PairModel.findOne({
+            updatedAt: { $gte: new Date(new Date().getTime()-STALE_MILIS).toISOString() },
+            address,
+        }).lean(),
         'database',
     )
     return cacheState[address] = value

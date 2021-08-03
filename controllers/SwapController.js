@@ -3,6 +3,7 @@ const swapx = require('../services/swapx')
 const apiResponse = require("../helpers/apiResponse");
 const Bluebird = require('bluebird')
 const PairModel = require('../models/PairModel')
+const { STALE_MILIS } = require('../helpers/constants').time
 
 exports.find = [
 	async function (req, res) {
@@ -28,6 +29,7 @@ exports.pair = [
 			const { key } = req.params
 			if (!key) {
 				var states = await PairModel.find({
+					updatedAt: { $gte: new Date(new Date().getTime()-STALE_MILIS).toISOString() },
 					rank: { $exists: true, $ne: null },
 					liquidity: { $exists: true, $ne: null },
 					$expr: { $gt: [ { $strLenCP: "$liquidity" }, 18 ] },	// >= 1 BNB
@@ -37,7 +39,10 @@ exports.pair = [
 				if (!key.length) {
 					return apiResponse.successResponseWithData(res, "Operation success", {});
 				}
-				var states = await PairModel.find({ address: { $in: keys } }).lean()
+				var states = await PairModel.find({
+					updatedAt: { $gte: new Date(new Date().getTime()-STALE_MILIS).toISOString() },
+					address: { $in: keys },
+				}).lean()
 			}
 
 			if (!states) {
