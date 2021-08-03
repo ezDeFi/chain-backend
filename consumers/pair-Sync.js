@@ -14,7 +14,12 @@ const { STALE_MILIS } = require('../helpers/constants').time
 module.exports = (key) => {
     // reset the state
     // require('../models/LogsStateModel').deleteOne({ key }).then(console.error).catch(console.error)
-    // PairModel.deleteMany({}).then(console.error).catch(console.error)
+    // PairModel.updateMany({}, {
+    //     reserve0: null,
+    //     reserve1: null,
+    //     liquidity: null,
+    //     rank: null,
+    // }).then(console.error).catch(console.error)
 
     const pair = new ethers.Contract(ZERO_ADDRESS, contractABI)
     const filter = pair.filters.Sync(null, null)
