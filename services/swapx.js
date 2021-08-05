@@ -14,6 +14,12 @@ const bn = ethers.BigNumber.from
 const bscUtil = require('bsc_util')
 const { STALE_MILIS } = require('../helpers/constants').time
 
+const DV_PRECISION = 1000000
+const RATE_PRECISION = 1000000
+
+const DV_THRESHOLD = 0.03
+const RATE_THRESHOLD = 0.9
+
 var provider
 function getProvider() {
     if (!provider) {
@@ -124,6 +130,10 @@ function getRouterContract(swap) {
         return
     }
     return CONTRACTS[swap] = new ethers.Contract(SERVICES[swap].router, UniswapV2Router01, getProvider())
+}
+
+function getSwapFromFactory(address) {
+    return Object.entries(SERVICES).find(([swap, { factory }]) => factory == address)[0]
 }
 
 async function getAmountOutByReserves(swap, amountIn, reserveIn, reserveOut) {
@@ -507,20 +517,19 @@ function createSwapContext({gasPrice, gasToken, getState}) {
         }
     }
 
-    async function swapRate(swap, tokenIn, tokenOut) {
+    async function swapRate(nativeSwap, tokenIn, swap, tokenOut) {
         try {
-            const router = await getRouterContract(swap)
             const from = process.env.SWAPPER
 
             const amount = bn(process.env.SWAP_AMOUNT)
 
-            const aggregator = new ethers.Contract(process.env.AGGREGATOR, Aggregator, provider)
+            const aggregator = new ethers.Contract(process.env.AGGREGATOR, Aggregator, getProvider())
             if (tokenIn == TOKENS.WBNB) {
                 const amountOuts = await aggregator.callStatic.swap(
                     TOKENS.BNB,
                     0,
                     [{
-                        router: router.address,
+                        router: getRouterContract(swap).address,
                         amount: 0,
                         path: [ TOKENS.WBNB, ZERO_ADDRESS ],
                     }],
@@ -533,16 +542,19 @@ function createSwapContext({gasPrice, gasToken, getState}) {
                 console.error(swap, tokenName(tokenIn), tokenName(tokenOut), amountOuts.map(a => a.toString()))
                 return [ amountOuts[0], amountOuts[2] ]
             }
+            if (!nativeSwap) {
+                throw new Error('missing param: nativeSwap')
+            }
 
             const amountOuts = await aggregator.callStatic.swap(
                 TOKENS.BNB,
                 0,
                 [{
-                    router: router.address,
+                    router: getRouterContract(nativeSwap).address,
                     amount: 0,
                     path: [ TOKENS.WBNB, tokenIn ],
                 }, {
-                    router: router.address,
+                    router: getRouterContract(swap).address,
                     amount: 0,
                     path: [ tokenIn, ZERO_ADDRESS ],    // swap to tokenOut and send to msg.sender
                 }],
@@ -561,159 +573,190 @@ function createSwapContext({gasPrice, gasToken, getState}) {
             throw err
         }
     }
-    
-    async function updateRank(addresses) {
+
+    async function getDeviation(states) {
         const changes = new Map()
 
-        await Bluebird.map(addresses, async (address) => {
-            const pair = await getState(address)
+        const pairs = new Set()
+        await Bluebird.map(states.keys(), async (address) => {
+            const state = await getState(address)
             // console.error({address, pair})
-            if (!pair || pair.liquidity == '0') {
+            if (!state) {
                 return
             }
-            const { token0, token1 } = pair
+            const { token0, token1 } = state
             if (!token0 || !token1) {
                 return
             }
             // console.error({token0, token1})
 
-            const rs = await Bluebird
-                .map(Object.keys(SERVICES), async swap => {
-                    const address = bscUtil.findPair(swap, token0, token1)
-                    const pair = await getState(address)
-                    if (pair && pair.reserve0 && pair.reserve1) {
-                        // console.error({address, pair})
-                        return [ address, pair.reserve0, pair.reserve1 ]
+            const key = `${token0} ${token1}` 
+            pairs.add(key)
+        })
+
+        await Bluebird.map(pairs.keys(), async key => {
+            const [token0, token1] = key.split(' ')
+            // console.error({token0, token1})
+
+            const rs = await Bluebird.map(Object.keys(SERVICES), async swap => {
+                const address = bscUtil.findPair(swap, token0, token1)
+                const state = await getState(address)
+                if (state) {
+                    const { reserve0, reserve1 } = state
+                    if (reserve0 && reserve1) {
+                        return [ reserve0, reserve1, address ]
                     }
-                })
-                .filter(r => !!r)
-            
-            // console.error({rs})
+                }
+            })
+            .filter(r => !!r)
 
-            if (!rs.length) {
-                // ingore uninterested pair reserves
-                return
-            }
-
-            if (rs.length == 1) {
-                const [address] = rs[0]
-                const pair = changes.get(address) || {}
-                pair.rank = null
-                pair.liquidity = null
-                changes.set(address, pair)
-                return
-            }
-
-            const lqs = await Bluebird
-                .map([[token0, pair.reserve0], [token1, pair.reserve1]], ([token, r]) => {
-                    return Bluebird.map(Object.keys(SERVICES), async swap => {
-                        if (token == TOKENS.WBNB) return
-                        const riro = await getPairReserves(swap, token, TOKENS.WBNB)
-                        if (!riro || !riro.length) return
-                        const [ri, ro] = riro
-                        return {
-                            swap,
-                            token,
-                            amount: bn(r).mul(bn(ro)).div(bn(ri)),
-                        }
-                    })
-                })
-                .then(_.flatten)
-                .filter(lq => !!lq)
-
-            if (lqs && lqs.length) {
-                // console.error(lqs.map(lq => ({...lq, amount: lq.amount.toString()})))
-                const avg = lqs.reduce((sum, lq) => sum.add(lq.amount), bn(0)).div(bn(lqs.length))
-                // console.error(address, lqs.length, avg.toString())
-                pair.liquidity = avg.toString()
-                changes.set(address, pair)
-            } else {
-                pair.liquidity = null
-                changes.set(address, pair)
-                return
-            }
-
-            const [s0, s1] = rs.reduce(([s0, s1], [, r0, r1]) => {
+            const [s0, s1] = rs.reduce(([s0, s1], [r0, r1]) => {
                 return [
                     s0.add(bn(r0)),
                     s1.add(bn(r1)),
                 ]
             }, [bn(0), bn(0)])
 
-            // console.error(s0.toString(), s1.toString(), rs)
-
-            return Bluebird.map(rs, async ([address, r0, r1]) => {
-                const pair = changes.get(address) || {}
-                // console.error({address, r0, r1})
+            await Bluebird.map(rs, async ([r0, r1, address]) => {
+                const state = await getState(address)
+                // assert(!!state)
                 const num = bn(r0).mul(s1)
                 const denom = bn(r1).mul(s0)
                 const direction = num.gt(denom)
                 const deviation = direction ? num.sub(denom) : denom.sub(num)
-                const dv = deviation.mul(bn(1000000)).div(num).toNumber() / 1000000
-                if (dv < 0.03) {
-                    pair.rank = null
-                    changes.set(address, pair)
-                    return
-                }
-
-                try {
-                    const { token0, token1, reserve0, reserve1 } = await getState(address)
-                    const { swap, token } = lqs[0]
-                    const [[in0, out1], [in1, out0]] = await Bluebird.map([[token0, token1], [token1, token0]],
-                        ([tokenIn, tokenOut]) => swapRate(swap, tokenIn, tokenOut)
-                    )
-                    console.error({in0, out1, in1, out0})
-                    const forward = out1.mul(reserve0).mul(bn(1000000)).div(in0).div(reserve1).toNumber() / 1000000
-                    const backward = out0.mul(reserve1).mul(bn(1000000)).div(in1).div(reserve0).toNumber() / 1000000
-                    console.error({forward, backward})
-
-                    // const [ a, b ] = await context.swapRate(swap, token0, token1)
-
-                    // const [ tokenIn, tokenOut ] = token == token0 ? [ token0, token1 ] : [ token1, token0 ]
-                    // const [ amountIn, amountOut ] = await context.swapRate(swap, tokenIn, tokenOut)
-                    // const [ amount0, amount1 ] = token == token0 ? [ amountIn, amountOut ] : [ amountOut, amountIn ]
-                    // const num = amount0.mul(r1)
-                    // const denom = amount1.mul(r0)
-                    // const lost = denom.sub(num).mul(bn(1000)).div(denom).toNumber() / 1000
-                    // console.error({dv, lost})
-                    // if (Math.abs(lost) > dv * 2) {
-                    //     console.log('BLACKLIST: lost after swapping', address, value)
-                    //     value.liquidity = '0'   // mark to ignore
-                    //     value.rank = null
-                    //     changes.set(address, value)
-                    //     return
-                    // }
-                } catch(err) {
-                    if (err.reason && err.reason.endsWith(': K')) {
-                        console.log('BLACKLIST: failed K pool', address, pair)
-                        pair.liquidity = '0'   // mark to ignore
-                        pair.rank = null
-                        changes.set(address, pair)
-                        return
-                    }
-                    console.error({dv}, err)
-                }
-
-                try {
-                    pair.rank = deviation.isZero() ? null : num.mul(bn(1000000)).div(deviation).toNumber()
-                    pair.direction = direction
-                } catch(err) {
-                    console.error(err)
-                    pair.rank = null
-                }
-                // console.error({address, value})
-                changes.set(address, pair)
+                const dv = deviation.mul(bn(DV_PRECISION)).div(num).toNumber() / DV_PRECISION
+                changes.set(address, {
+                    dv,
+                    direction,
+                })
             })
-
-            // console.error(num.toString(), denom.toString(), delta.toString(), rank.toString())
-
-            // console.error({rs, s0: s0.toString(), s1: s1.toString()})
         })
 
-        // console.error({changes})
+        console.log('states:', states.size, ' pairs:', pairs.size, ' changes:', changes.size)
 
-        await Bluebird.map(changes.entries(),
-            ([address, value]) => PairModel.updateOne({ address }, value, { upsert: true })
+        return changes
+    }
+
+    async function getRank(changes) {
+        const toNativeSwap = new Map()
+        await Bluebird.map(changes.keys(), async address => {
+            const change = changes.get(address)
+            const { dv } = change
+            if (!dv || dv < DV_THRESHOLD) {
+                // ignore pools with low rank
+                return
+            }
+            console.error({address, dv})
+
+            const state = await getState(address)
+            if (!state) {
+                return
+            }
+            const { rate01, rate10, token0, token1 } = state
+            if (!rate01 || !rate10) {
+                // setup to calculate the rates
+                if (token0 && token0 != TOKENS.WBNB) {
+                    toNativeSwap.set(token0, undefined)
+                }
+                if (token1 && token1 != TOKENS.WBNB) {
+                    toNativeSwap.set(token1, undefined)
+                }
+            }
+        })
+
+        // setup to calculate the rates
+        await Bluebird.map(Array.from(toNativeSwap.keys()), async token => {
+            const swaps = await Bluebird.map(Object.keys(SERVICES), async swap => {
+                const riro = await getPairReserves(swap, token, TOKENS.WBNB)
+                if (!riro || !riro.length) return
+                return {
+                    swap,
+                    r: bn(riro[0]),
+                }
+            }).filter(s => !!s)
+
+            // console.error({swaps})
+
+            const best = swaps.reduce(
+                (best, {swap, r}) => r.gt(best.r) ? {swap, r} : best,
+                {swap: undefined, r: bn(0)},
+            )
+            toNativeSwap.set(token, best.swap)
+        })
+
+        console.error({toNativeSwap})
+
+        await Bluebird.map(changes.keys(), async address => {
+            const change = changes.get(address)
+            const { dv, direction } = change
+            if (!dv || dv < DV_THRESHOLD) {
+                // ignore pools with low rank
+                delete change.dv
+                delete change.direction
+                return
+            }
+            const state = await getState(address)
+            if (!state) {
+                return
+            }
+            let { rate01, rate10 } = state
+            if (!rate01 || !rate10) {
+                // calculate the rates
+                const { token0, token1, reserve0, reserve1, factory } = state
+                const [[inF, outF], [inB, outB]] = await Bluebird.map([[token0, token1], [token1, token0]],
+                    ([tokenIn, tokenOut]) => {
+                        const nativeSwap = toNativeSwap.get(tokenIn)
+                        if (!nativeSwap && tokenIn != TOKENS.WBNB) {
+                            console.error('native swap missing', {address, state})
+                            throw new Error('native swap missing')
+                        }
+                        const swap = getSwapFromFactory(factory)
+                        return swapRate(nativeSwap, tokenIn, swap, tokenOut)
+                    }
+                )
+                // console.error({inF, outF, inB, outB})
+                // console.error(
+                //     bn(RATE_PRECISION).mul(outF).div(inF).toNumber() / RATE_PRECISION,
+                //     bn(RATE_PRECISION).mul(reserve1).div(reserve0).toNumber() / RATE_PRECISION,
+                // )
+                rate01 = outF.mul(reserve0).mul(RATE_PRECISION).div(inF).div(reserve1).toNumber() / RATE_PRECISION
+                rate10 = outB.mul(reserve1).mul(RATE_PRECISION).div(inB).div(reserve0).toNumber() / RATE_PRECISION
+                console.error({rate01, rate10})
+                if (rate01 >= 1 || rate10 >= 1) {
+                    console.error('UNEXPECTED RATE', {rate01, rate10})
+                }
+                change.rate01 = rate01
+                change.rate10 = rate10
+            }
+            if (rate01 < RATE_THRESHOLD || rate10 < RATE_THRESHOLD) {
+                var rank = null
+                delete change.direction
+            } else {
+                var rank = dv * (direction ? rate01 : rate10)
+                console.error({dv, direction, rate01, rate10, rank})
+            }
+            change.rank = rank
+            delete change.dv
+            changes.set(address, change)
+        })
+
+        return changes
+    }
+
+    async function updateRank(states) {
+        const changes = await getDeviation(states)
+        await getRank(changes)
+
+        changes.forEach((change, address, changes) => {
+            if (!Object.keys(change).length) {
+                changes.delete(address)
+            }
+        })
+
+        console.error({changes})
+
+        await Bluebird.map(changes.entries(), ([address, value]) =>
+            PairModel.updateOne({ address }, value, { upsert: true })
         )
     }
 

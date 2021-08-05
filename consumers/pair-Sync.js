@@ -11,10 +11,9 @@ module.exports = (key) => {
     // reset the state
     // require('../models/LogsStateModel').deleteOne({ key }).then(console.error).catch(console.error)
     // PairModel.updateMany({}, {
-    //     reserve0: null,
-    //     reserve1: null,
-    //     liquidity: null,
     //     rank: null,
+    //     // rate01: null,
+    //     // rate10: null,
     // }).then(console.error).catch(console.error)
 
     const pair = new ethers.Contract(ZERO_ADDRESS, contractABI)
@@ -49,7 +48,7 @@ module.exports = (key) => {
 
             try {
                 const context = createSwapContext({})
-                await context.updateRank(Array.from(changes.keys()))
+                await context.updateRank(changes)
             } catch (err) {
                 console.error(err)
             }

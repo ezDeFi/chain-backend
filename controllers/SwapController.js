@@ -23,6 +23,10 @@ exports.find = [
 	}
 ]
 
+function percent(r) {
+	return (r * 100).toFixed(2) + '%'
+}
+
 exports.pair = [
 	async function (req, res) {
 		try {
@@ -31,9 +35,7 @@ exports.pair = [
 				var states = await PairModel.find({
 					updatedAt: { $gte: new Date(new Date().getTime()-STALE_MILIS).toISOString() },
 					rank: { $exists: true, $ne: null },
-					liquidity: { $exists: true, $ne: null },
-					$expr: { $gt: [ { $strLenCP: "$liquidity" }, 18 ] },	// >= 1 BNB
-				}).sort({rank:1}).limit(6).lean()
+				}).sort({rank:-1}).limit(6).lean()
 			} else {
 				const keys = key.split(',')
 				if (!key.length) {
@@ -51,9 +53,10 @@ exports.pair = [
 
 			states = states
 				.reduce((states, s, i) => ({...states, [s.address]: {
-					deviation: (100000000 / s.rank).toFixed(2) + '%',
+					rank: percent(s.rank),
 					direction: s.direction ? 'forward' : 'backward',
-					liquidity: s.liquidity,
+					rate01: percent(s.rate01),
+					rate10: percent(s.rate10),
 					factory: s.factory,
 					token0: s.token0,
 					token1: s.token1,
