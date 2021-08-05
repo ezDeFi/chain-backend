@@ -25,7 +25,7 @@ function getProvider() {
     if (!provider) {
         const { JsonRpcProvider } = require('@ethersproject/providers')
         provider = new JsonRpcProvider({
-            timeout: 3000,
+            timeout: 6000,
             url: process.env.RPC,
         })
     }

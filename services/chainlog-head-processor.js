@@ -7,7 +7,7 @@ const createProccesor = ({config, consumers}) => {
     // rollback the lastHead
     // ConfigModel.updateOne(
     //     { key: 'lastHead' },
-    //     { value: 8000000 },
+    //     { value: 9765000 },
     //     { upsert: true },
     // ).then(console.log).catch(console.error)
 
