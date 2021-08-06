@@ -1,7 +1,7 @@
 name: Deploy Workflow
 on: 
     push:
-        branches: [github-actions]
+        branches: [sfarm-github-actions]
 jobs:
     deploy:
         name: Deploy to Docker Swarm
