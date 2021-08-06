@@ -1,7 +1,7 @@
 name: Deployment Workflow
 on: 
     push:
-        branches: [sfarm-github-actions]
+        branches: [sfarm]
 jobs:
     deploy:
         name: Build, Pack and Deploy to Servers
