@@ -36,3 +36,11 @@ jobs:
                 tags: ${{ steps.meta.outputs.tags }}
                 cache-from: type=gha
                 cache-to: type=gha,mode=max
+            - name: Request Docker Swarm to deploy
+              uses: kevin-leptons/ssh_action@v1
+              env:
+                DOCKER_IMAGE_VERSION: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+              with:
+                host: ${{ secrets.DEPLOYMENT_HOST }}
+                key: ${{ secrets.DEPLOYMENT_KEY }}
+                command: lz_service up chain-backend ${{ env.DOCKER_IMAGE_VERSION }}
