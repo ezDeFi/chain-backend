@@ -23,7 +23,5 @@ COPY --from=builder /package/node_modules node_modules
 #   * Contain source code.
 #   * If above layer and source code does not change then docker uses
 #     cache image.
-FROM dependency_package_layer
-WORKDIR /package
 COPY . .
 ENTRYPOINT ["node", "bin/www"]
