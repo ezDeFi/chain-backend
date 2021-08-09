@@ -15,7 +15,7 @@ RUN npm install --only production
 # Layer B
 #   * Contain all dependency packages to run this service.
 #   * If above layer does not change then docker uses cache image.
-FROM node:10-alpine as dependency_package_layer
+FROM node:10-alpine
 WORKDIR /package
 COPY --from=builder /package/node_modules node_modules
 
