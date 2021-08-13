@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node example/workers/chainlog-worker.js",
+    "start": "node example/worker.js",
     "test": "mocha"
   },
   "dependencies": {

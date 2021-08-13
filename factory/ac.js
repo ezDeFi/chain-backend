@@ -1,8 +1,7 @@
-const LogsStateModel = require('../../models/LogsStateModel')
-const { filterLogs } = require('../../helpers/logs')
+const { filterLogs } = require('../helpers/logs')
 const { diff } = require('jsondiffpatch')
 
-module.exports = ({key, filter, genesis, applyLogs}) => {
+module.exports = ({key, filter, genesis, applyLogs, LogsStateModel}) => {
     // reset the state
     // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
 

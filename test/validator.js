@@ -7,8 +7,8 @@ describe('validator.standardizeStartConfiguration', () => {
     it('return valid config', () => {
         let config = {
             consumers: [{}],
-            mongoEndpoint: 'mongo://foo.bar/database',
-            bscEndpoint: 'http://bar.foo'
+            mongoEndpoint: 'mongodb://foo.bar/database',
+            bscEndpoint: 'http://bar.foo',
         }
         let validConfig = standardizeStartConfiguration(config)
 
@@ -32,8 +32,8 @@ describe('validator.standardizeStartConfiguration', () => {
             () => {
                 standardizeStartConfiguration({
                     consumers: 135,
-                    mongoEndpoint: 'mongo://foo.bar/database',
-                    bscEndpoint: 'http://bar.foo'
+                    mongoEndpoint: 'mongodb://foo.bar/database',
+                    bscEndpoint: 'http://bar.foo',
                 })
             },
             {
@@ -49,7 +49,7 @@ describe('validator.standardizeStartConfiguration', () => {
                 standardizeStartConfiguration({
                     consumers: [{}],
                     mongoEndpoint: 'http://foo.bar/database',
-                    bscEndpoint: 'http://bar.foo'
+                    bscEndpoint: 'http://bar.foo',
                 })
             },
             {
@@ -64,8 +64,8 @@ describe('validator.standardizeStartConfiguration', () => {
             () => {
                 standardizeStartConfiguration({
                     consumers: [{}],
-                    mongoEndpoint: 'mongo://foo.bar/database',
-                    bscEndpoint: 'fpt://bar.foo'
+                    mongoEndpoint: 'mongodb://foo.bar/database',
+                    bscEndpoint: 'fpt://bar.foo',
                 })
             },
             {

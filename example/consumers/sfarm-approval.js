@@ -1,20 +1,21 @@
 const { ethers } = require('ethers')
-const { ZERO_HASH, ZERO_ADDRESS } = require('../helpers/constants').hexes
-const abiIERC20 = require('../ABIs/IERC20.json').abi
-const accumulator = require('./factory/ac')
+const { ZERO_HASH, ZERO_ADDRESS } = require('../../helpers/constants').hexes
+const abiIERC20 = require('../../ABIs/IERC20.json').abi
+const accumulator = require('../../factory/ac')
 
-module.exports = (key) => {
-    // reset the state
-    // require('../models/LogsStateModel').deleteOne({ key }).then(console.error).catch(console.error)
-
+// Input
+//  * config.key {String}
+//  * config.farm {String}
+//  * config.farmGenesis {String}
+module.exports = (config) => {
     const IERC20 = new ethers.Contract(ZERO_ADDRESS, abiIERC20)
-    const filter = IERC20.filters.Approval(process.env.FARM, null)
+    const filter = IERC20.filters.Approval(config.farm, null)
     delete filter.address
 
     return accumulator({
-        key,
-        filter,
-        genesis: parseInt(process.env.FARM_GENESIS),
+        key: config.key,
+        filter: filter,
+        genesis: parseInt(config.farmGenesis),
 
         applyLogs: (value, logs) => {
             value = {...value}

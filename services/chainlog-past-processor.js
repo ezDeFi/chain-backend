@@ -1,9 +1,8 @@
 const Bluebird = require('bluebird')
 const _ = require('lodash')
-const ConfigModel = require("../models/ConfigModel")
 const { mergeRequests } = require("../helpers/logs")
 
-const createProccesor = ({config, consumers}) => {
+const createProccesor = ({config, consumers, mongo}) => {
     const _splitChunks = (from, to, count) => {
         // console.log('slpitChunks', {from, to, count})
         const size = Math.round((to - from) / count)
@@ -19,7 +18,7 @@ const createProccesor = ({config, consumers}) => {
     }
 
     const process = async () => {
-        const lastHead = await ConfigModel.findOne({
+        const lastHead = await mongo.ConfigModel.findOne({
             key: 'lastHead'
         }).lean().then(m => m && m.value);
     
