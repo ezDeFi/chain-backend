@@ -1,47 +1,20 @@
 {
-  "name": "rest-api-nodejs-mongodb",
+  "name": "chain-backend",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www",
-    "watch": "nodemon ./bin/www",
-    "rsync": "rsync -urtvL --delete -e ssh --exclude=.env.local --exclude=node_modules --exclude=package-lock.json --exclude=.git ./",
-    "test": "mocha",
-    "lint": "eslint --fix --config .eslintrc.json \"**/*.js\""
+    "start": "node example/workers/chainlog-worker.js",
+    "test": "mocha"
   },
   "dependencies": {
     "@ethersproject/providers": "https://github.com/ezDeFi/ethers.js/releases/download/v5.3.1.1/ethers_providers.tar.gz",
-    "bcrypt": "^3.0.6",
     "bsc_util": "^0.4.0",
-    "codacy-coverage": "^3.4.0",
-    "cookie-parser": "~1.4.3",
-    "cors": "^2.8.5",
-    "cron": "^1.8.2",
-    "debug": "~2.6.9",
-    "dotenv": "^10.0.0",
     "ethers": "^5.1.4",
-    "express": "~4.16.0",
-    "express-jwt": "^5.3.1",
-    "express-validator": "^6.2.0",
     "json-stable-stringify": "^1.0.1",
     "jsondiffpatch": "^0.4.1",
-    "jsonwebtoken": "^8.5.1",
-    "mocha-lcov-reporter": "^1.3.0",
-    "moment": "^2.24.0",
-    "mongoose": "^5.7.6",
-    "morgan": "~1.9.0",
-    "nodemailer": "^6.3.1"
+    "mongoose": "^5.7.6"
   },
   "devDependencies": {
-    "@types/bluebird": "^3.5.35",
-    "@types/cron": "^1.7.2",
-    "@types/lodash": "^4.14.170",
-    "chai": "^4.2.0",
-    "chai-http": "^4.3.0",
-    "eslint": "^6.5.1",
-    "kill-port": "^1.6.1",
-    "mocha": "^6.2.2",
-    "nodemon": "^1.19.4",
-    "nyc": "^14.1.1"
+    "mocha": "^6.2.2"
   }
 }
