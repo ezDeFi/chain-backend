@@ -46,6 +46,13 @@ function createUpdateConsumer() {}
 ## Types
 
 ```js
+// Type WorkerConfiguration {Object}
+//  * consumers {Array<Consumer>}
+//  * mongoose {mongoose.Connection}
+//  * ethersProvider {ethers.providers.JsonRpcProvider}
+//  * pastProcessorConfig {ProcessorConfig}
+//  * headProcessorConfig {ProcessorConfig}
+
 // Type Consumer {Object}
 // 
 // Description
@@ -54,6 +61,11 @@ function createUpdateConsumer() {}
 // Attributes
 //  * key {String}
 //  * getRequests {function(?)}
+
+// Type ProcessorConfig {Object}
+//  * getLogs {function ?}
+//  * getConcurrency {function ?}
+//  * getSize {function ?}
 
 // Type MongoService {Object}
 //
