@@ -16,7 +16,7 @@ async function open(endpoint) {
     return {
         ConfigModel: mongoose.model("Config", ConfigSchema),
         LogsStateModel: mongoose.model("LogsState", LogsStateSchema),
-        ConfigModel: mongoose.model("Memoize", MemoizeSchema)
+        MemoizeModel: mongoose.model("Memoize", MemoizeSchema)
     }
 }
 

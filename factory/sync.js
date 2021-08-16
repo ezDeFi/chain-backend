@@ -1,11 +1,11 @@
-const LogsStateModel = require('../../models/LogsStateModel')
-const { filterLogs } = require('../../helpers/logs')
+const { filterLogs } = require('../helpers/logs')
 const { diff } = require('jsondiffpatch')
 
-module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
+function createSyncConsumer({key, filter, genesis, applyLogs, rangeLimit, mongo}) {
     // reset the state
     // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
 
+    let {LogsStateModel} = mongo
     const processLogs = async ({ request, logs, fromBlock, toBlock, lastHead, head }) => {
         // TODO: handle synchronization
 
@@ -112,3 +112,5 @@ module.exports = ({key, filter, genesis, applyLogs, rangeLimit}) => {
         },
     }
 }
+
+module.exports = createSyncConsumer

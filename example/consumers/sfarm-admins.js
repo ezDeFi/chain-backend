@@ -1,21 +1,25 @@
 const { ethers } = require('ethers')
 const { ZERO_HASH } = require('../../helpers/constants').hexes
 const contractABI = require('../../ABIs/SFarm.json').abi
-const accumulator = require('../../factory/ac')
+const createAccumulatorConsumer = require('../../factory/ac')
 
 // Input
 //  * config.key {String}
 //  * config.farm {String}
 //  * config.farmGenesis {String}
-//  * config.LogsStateModel {mongoose.Model}
+//  * config.mongo {MongoService}
+//
+// Output {Object}
+//  * key {String}
+//  * getRequests {function(?)}
 function createConsumer(config) {
     const SFarm = new ethers.Contract(config.farm, contractABI)
 
-    return accumulator({
+    return createAccumulatorConsumer({
         key: config.key,
         filter: SFarm.filters.AuthorizeAdmin(null, null),
         genesis: parseInt(config.farmGenesis),
-        LogsStateModel: config.LogsStateModel,
+        mongo: config.mongo,
 
         applyLogs: (value, logs) => {
             value = {...value}
@@ -39,6 +43,8 @@ function createConsumer(config) {
 //  * config.key {String}
 //  * config.farm {String}
 //  * config.farmGenesis {String}
+//
+// Output {function createConsumer()}
 function createConsumerFactory(config) {
 
     // Input
@@ -49,7 +55,7 @@ function createConsumerFactory(config) {
             key: config.key,
             farm: config.farm,
             farmGenesis: config.farmGenesis,
-            LogsStateModel: factoryConfig.mongo.LogsStateModel
+            mongo: factoryConfig.mongo
         })
     }
 

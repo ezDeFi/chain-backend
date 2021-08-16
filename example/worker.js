@@ -27,7 +27,7 @@ async function main() {
     await startWorker({
         consumerFactories: _loadConsumerFactories(),
         mongoEndpoint: 'mongodb://localhost/sfarm',
-        bscEndpoint: 'https://bsc-dedicated-a29k3di6gz293snk.ezdefi.com'
+        bscEndpoint: 'https://bsc-dataseed.binance.org'
     })
 }
 

@@ -4,7 +4,7 @@ const {ChainBackendError} = require('./error')
 
 // Input
 //  * config {Object}
-//  * config.consumerFactories {Array<Consumer>}
+//  * config.createConsumerFunctions {Array<Consumer>}
 //  * config.mongoEndpoint {String}
 //  * config.bscEndpoint {String}
 function standardizeStartConfiguration(config) {
@@ -12,12 +12,12 @@ function standardizeStartConfiguration(config) {
         throw new ChainBackendError('undefined configuration')
     }
 
-    _validateConsumerFactoryList(config.consumerFactories)
+    _validateConsumerFactoryList(config.createConsumerFunctions)
     _validateMongoEndpoint(config.mongoEndpoint)
     _validateBscEndpoint(config.bscEndpoint)
 
     return {
-        consumerFactories: config.consumerFactories,
+        createConsumerFunctions: config.createConsumerFunctions,
         mongoEndpoint: config.mongoEndpoint,
         bscEndpoint: config.bscEndpoint,
     }
@@ -25,12 +25,12 @@ function standardizeStartConfiguration(config) {
 
 function _validateConsumerFactoryList(factories) {
     if (Array.isArray(factories) === false|| factories.length === 0) {
-        throw new ChainBackendError('invalid configuration "consumerFactories"')
+        throw new ChainBackendError('invalid configuration "createConsumerFunctions"')
     }
 
     for (let index = 0; index < factories.length; ++index) {
         if ((typeof factories[index]) !== 'function') {
-            throw new ChainBackendError('invalid configuration "consumerFactories"')
+            throw new ChainBackendError('invalid configuration "createConsumerFunctions"')
         }
     }
 }

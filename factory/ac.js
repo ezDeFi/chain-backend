@@ -1,9 +1,22 @@
 const { filterLogs } = require('../helpers/logs')
 const { diff } = require('jsondiffpatch')
 
-module.exports = ({key, filter, genesis, applyLogs, LogsStateModel}) => {
+// Input
+//  * config {Object}
+//  * config.key {String}
+//  * config.filter {ethers.Contract.Filter}
+//  * config.genesis {String}
+//  * config.applyLogs {function ?}
+//  * config.mongo {MongoService}
+//
+// Output {Object}
+//  * key {String}
+//  * getRequests {function ?}
+function createAccumulatorConsumer({key, filter, genesis, applyLogs, mongo}) {
     // reset the state
     // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
+
+    let {LogsStateModel} = mongo
 
     const processLogs = async ({ request, logs, fromBlock, toBlock, lastHead, head }) => {
         // TODO: handle synchronization
@@ -90,3 +103,5 @@ module.exports = ({key, filter, genesis, applyLogs, LogsStateModel}) => {
         },
     }
 }
+
+module.exports = createAccumulatorConsumer

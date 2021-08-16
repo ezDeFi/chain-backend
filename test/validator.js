@@ -6,7 +6,9 @@ const {standardizeStartConfiguration} = require('../validator')
 describe('validator.standardizeStartConfiguration', () => {
     it('return valid config', () => {
         let config = {
-            consumers: [{}],
+            createConsumerFunctions: [
+                function () {}
+            ],
             mongoEndpoint: 'mongodb://foo.bar/database',
             bscEndpoint: 'http://bar.foo',
         }
@@ -27,18 +29,18 @@ describe('validator.standardizeStartConfiguration', () => {
         )
     })
 
-    it('config.consumers is not an array throws error', () => {
+    it('config.createConsumerFunctions is not an array throws error', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
-                    consumers: 135,
+                    createConsumerFunctions: 135,
                     mongoEndpoint: 'mongodb://foo.bar/database',
                     bscEndpoint: 'http://bar.foo',
                 })
             },
             {
                 name: 'ChainBackendError',
-                message: 'invalid configuration "consumers"'
+                message: 'invalid configuration "createConsumerFunctions"'
             }
         )
     })
@@ -47,7 +49,9 @@ describe('validator.standardizeStartConfiguration', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
-                    consumers: [{}],
+                    createConsumerFunctions: [
+                        function () {}
+                    ],
                     mongoEndpoint: 'http://foo.bar/database',
                     bscEndpoint: 'http://bar.foo',
                 })
@@ -63,7 +67,9 @@ describe('validator.standardizeStartConfiguration', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
-                    consumers: [{}],
+                    createConsumerFunctions: [
+                        function () {}
+                    ],
                     mongoEndpoint: 'mongodb://foo.bar/database',
                     bscEndpoint: 'fpt://bar.foo',
                 })

@@ -1,6 +1,6 @@
 const {Schema} = require("mongoose")
 
-module.export = new Schema(
+module.exports = new Schema(
     {
         key: {
             index: true,
