@@ -1,14 +1,5 @@
-# Chain Backend
+'use strict'
 
-* A library to retrieve and strore data from Binance Smart Chain network.
-* [Quick Start](#quick-start)
-* [APIs](#apis)
-* [Types](#types)
-* [Development](#development)
-
-## Example
-
-```js
 const { ethers } = require('ethers')
 const {JsonRpcProvider} = require('@ethersproject/providers')
 const {Mongoose} = require('mongoose')
@@ -64,9 +55,7 @@ function createConsumer(config) {
 
 async function main() {
     let mongoose = await _createMongoose()
-    let ethersProvider = new JsonRpcProvider(
-        'https://bsc-dataseed.binance.org'
-    )
+    let ethersProvider = new JsonRpcProvider('https://bsc-dataseed.binance.org')
     let headProcessorConfig = createChainlogConfig({
         type: 'HEAD',
         config: {
@@ -100,80 +89,3 @@ async function main() {
 }
 
 main().catch(console.error)
-```
-
-## APIs
-
-```js
-const {
-    startWorker, 
-    createAccumulatorConsumer,
-    createSyncConsumer,
-    createUpdateConsumer,
-    createChainlogConfig
-} = require('chain-backend')
-
-// Description
-//  * Start a worker that retrieve and store data from Binance Smart Chain
-//    network.
-//
-// Input
-//  * config {WorkerConfiguration}
-async function startWorker(config) {}
-
-// Description
-// ?
-//
-// Input
-//  * config {AccumulatorConsumerConfig}
-//
-// Output {Consumer}
-function createAccumulatorConsumer(config) {}
-
-function createSyncConsumer() {}
-function createUpdateConsumer() {}
-function createChainlogConfig() {}
-```
-
-## Types
-
-```js
-// Type WorkerConfiguration {Object}
-//  * consumerConstructors {Array<ConsumerConstructor>}
-//  * mongoose {mongoose.Mongoose}
-//  * ethersProvider {ethers.providers.JsonRpcProvider}
-//  * pastProcessorConfig {ProcessorConfig}
-//  * headProcessorConfig {ProcessorConfig}
-
-// Type ConsumerConstructor {function(config)}
-//
-// Input
-//  * config.mongoose {mongoose.Mongoose}
-//  
-// Output {Consumer}
-
-
-// Type ProcessorConfig {Object}
-//  * getLogs {function ?}
-//  * getConcurrency {function ?}
-//  * getSize {function ?}
-
-
-// Type AccumulatorConsumerConfig
-//  * key {String}
-//  * filter {ethers.Contract.Filter}
-//  * genesis {String}
-//  * mongo {MongoService}
-//  * applyLogs {function ?}
-
-// Type Consumer {Object}
-//  * key {String}
-//  * getRequests {function(?)}
-```
-
-## Development
-
-```bash
-npm install
-npm test
-```

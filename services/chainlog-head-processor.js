@@ -2,7 +2,7 @@ const Bluebird = require('bluebird')
 const _ = require('lodash')
 const { mergeRequests } = require("../helpers/logs")
 
-const createProccesor = ({config, consumers, mongo}) => {
+const createProccesor = ({config, consumers, mongoose}) => {
     // rollback the lastHead
     // ConfigModel.updateOne(
     //     { key: 'lastHead' },
@@ -10,16 +10,18 @@ const createProccesor = ({config, consumers, mongo}) => {
     //     { upsert: true },
     // ).then(console.log).catch(console.error)
 
+    let ConfigModel = mongoose.model('Config')
+
     const process = async (head) => {
         const maxRange = config.getSize()
     
-        let lastHead = await mongo.ConfigModel.findOne({
+        let lastHead = await ConfigModel.findOne({
             key: 'lastHead'
         }).lean().then(m => m && m.value)
     
         if (!lastHead) {    // init the first sync
             lastHead = head - maxRange
-            await mongo.ConfigModel.updateOne(
+            await ConfigModel.updateOne(
                 { key: 'lastHead' },
                 { value: lastHead },
                 { upsert: true },
@@ -61,7 +63,7 @@ const createProccesor = ({config, consumers, mongo}) => {
             await Bluebird.map(requests, request => request.processLogs({ request, logs, fromBlock, toBlock, lastHead, head }))
         }
 
-        await mongo.ConfigModel.updateOne(
+        await ConfigModel.updateOne(
             { key: 'lastHead' },
             { value: toBlock },
             { upsert: true },

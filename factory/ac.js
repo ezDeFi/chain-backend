@@ -7,16 +7,16 @@ const { diff } = require('jsondiffpatch')
 //  * config.filter {ethers.Contract.Filter}
 //  * config.genesis {String}
 //  * config.applyLogs {function ?}
-//  * config.mongo {MongoService}
+//  * config.mongoose {mongoose.Mongoose}
 //
 // Output {Object}
 //  * key {String}
 //  * getRequests {function ?}
-function createAccumulatorConsumer({key, filter, genesis, applyLogs, mongo}) {
+function createAccumulatorConsumer({key, filter, genesis, applyLogs, mongoose}) {
     // reset the state
     // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
 
-    let {LogsStateModel} = mongo
+    let LogsStateModel = mongoose.model('LogsState')
 
     const processLogs = async ({ request, logs, fromBlock, toBlock, lastHead, head }) => {
         // TODO: handle synchronization

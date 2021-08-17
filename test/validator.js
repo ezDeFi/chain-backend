@@ -8,22 +8,19 @@ const {standardizeStartConfiguration} = require('../validator')
 describe('validator.standardizeStartConfiguration', () => {
     it('return valid config', () => {
         let config = {
-            consumers: [
-                {
-                    key: 'key_1',
-                    getRequests: function() {}
-                }
+            consumerConstructors: [
+                function() {}
             ],
             mongoose: new Mongoose('http://foo.bar/database'),
             ethersProvider: new JsonRpcProvider(),
             headProcessorConfig: {
                 getLogs: function() {},
-                getConcurency: function() {},
+                getConcurrency: function() {},
                 getSize: function() {}
             },
             pastProcessorConfig: {
                 getLogs: function() {},
-                getConcurency: function() {},
+                getConcurrency: function() {},
                 getSize: function() {}
             }
         }
@@ -44,56 +41,56 @@ describe('validator.standardizeStartConfiguration', () => {
         )
     })
 
-    it('config.consumers is not an array throws error', () => {
+    it('config.consumerConstructors is not an array throws error', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
-                    consumers: undefined,
+                    consumerConstructors: undefined,
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: new JsonRpcProvider(),
                     headProcessorConfig: {
                         getLogs: function() {},
-                        getConcurency: function() {},
+                        getConcurrency: function() {},
                         getSize: function() {}
                     },
                     pastProcessorConfig: {
                         getLogs: function() {},
-                        getConcurency: function() {},
+                        getConcurrency: function() {},
                         getSize: function() {}
                     }
                 })
             },
             {
                 name: 'ChainBackendError',
-                message: 'invalid configuration "consumers"'
+                message: 'invalid configuration "consumerConstructors"'
             }
         )
     })
 
-    it('config.consumers[0] is not a consumer throws error', () => {
+    it('config.consumerConstructors[0] is not a function throws error', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
-                    consumers: [
+                    consumerConstructors: [
                         {}
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: new JsonRpcProvider(),
                     headProcessorConfig: {
                         getLogs: function() {},
-                        getConcurency: function() {},
+                        getConcurrency: function() {},
                         getSize: function() {}
                     },
                     pastProcessorConfig: {
                         getLogs: function() {},
-                        getConcurency: function() {},
+                        getConcurrency: function() {},
                         getSize: function() {}
                     }
                 })
             },
             {
                 name: 'ChainBackendError',
-                message: 'invalid configuration "consumers[0]"'
+                message: 'invalid configuration "consumerConstructors[0]"'
             }
         )
     })
@@ -102,22 +99,19 @@ describe('validator.standardizeStartConfiguration', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
-                    consumers: [
-                        {
-                            key: 'key_1',
-                            getRequests: function() {}
-                        }
+                    consumerConstructors: [
+                        function() {}
                     ],
                     mongoose: undefined,
                     ethersProvider: new JsonRpcProvider(),
                     headProcessorConfig: {
                         getLogs: function() {},
-                        getConcurency: function() {},
+                        getConcurrency: function() {},
                         getSize: function() {}
                     },
                     pastProcessorConfig: {
                         getLogs: function() {},
-                        getConcurency: function() {},
+                        getConcurrency: function() {},
                         getSize: function() {}
                     }
                 })
@@ -133,22 +127,19 @@ describe('validator.standardizeStartConfiguration', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
-                    consumers: [
-                        {
-                            key: 'key_1',
-                            getRequests: function() {}
-                        }
+                    consumerConstructors: [
+                        function() {}
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: undefined,
                     headProcessorConfig: {
                         getLogs: function() {},
-                        getConcurency: function() {},
+                        getConcurrency: function() {},
                         getSize: function() {}
                     },
                     pastProcessorConfig: {
                         getLogs: function() {},
-                        getConcurency: function() {},
+                        getConcurrency: function() {},
                         getSize: function() {}
                     }
                 })
@@ -164,18 +155,15 @@ describe('validator.standardizeStartConfiguration', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
-                    consumers: [
-                        {
-                            key: 'key_1',
-                            getRequests: function() {}
-                        }
+                    consumerConstructors: [
+                        function() {}
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: new JsonRpcProvider(),
                     headProcessorConfig: {},
                     pastProcessorConfig: {
                         getLogs: function() {},
-                        getConcurency: function() {},
+                        getConcurrency: function() {},
                         getSize: function() {}
                     }
                 })
@@ -191,17 +179,14 @@ describe('validator.standardizeStartConfiguration', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
-                    consumers: [
-                        {
-                            key: 'key_1',
-                            getRequests: function() {}
-                        }
+                    consumerConstructors: [
+                        function() {}
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: new JsonRpcProvider(),
                     headProcessorConfig: {
                         getLogs: function() {},
-                        getConcurency: function() {},
+                        getConcurrency: function() {},
                         getSize: function() {}
                     },
                     pastProcessorConfig: {}

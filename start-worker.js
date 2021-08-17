@@ -2,6 +2,7 @@
 
 const HeadProcessor = require('./services/chainlog-head-processor')
 const PastProcessor = require('./services/chainlog-past-processor')
+const mongooseSchema = require('./mongoose-schema')
 const {standardizeStartConfiguration} = require('./validator')
 
 // Input
@@ -15,13 +16,21 @@ async function startWorker(config) {
 // Input
 //  * config {WorkerConfiguration}
 async function _startWorker(config) {
+    _applyMongooseSchema(config.mongoose)
+
+    let consumers = _createConsumers(
+        config.consumerConstructors, 
+        config.mongoose
+    )
     let headProcessor = HeadProcessor.createProccesor({
-        consumers: config.consumers,
-        config: config.headProcessorConfig
+        consumers: consumers,
+        config: config.headProcessorConfig,
+        mongoose: config.mongoose
     })
     let pastProcessor = PastProcessor.createProccesor({
-        consumers: config.consumers,
-        config: config.pastProcessorConfig
+        consumers: consumers,
+        config: config.pastProcessorConfig,
+        mongoose: config.mongoose
     })
     let isCatchingUp = false
 
@@ -52,13 +61,25 @@ async function _startWorker(config) {
     config.ethersProvider.getBlockNumber()
         .then(processBlock)
         .then(() => {
-            ethersProvider.on('block', processBlock)
+            config.ethersProvider.on('block', processBlock)
             crawl()
         })
         .catch(error => {
             console.error(error)
             process.exit(1)
         })
+}
+
+function _applyMongooseSchema(mongoose) {
+    mongoose.model("Config", mongooseSchema.ConfigSchema),
+    mongoose.model("LogsState", mongooseSchema.LogsStateSchema),
+    mongoose.model("Memoize", mongooseSchema.MemoizeSchema)
+}
+
+function _createConsumers(constructors, mongoose) {
+    return constructors.map(constructor => {
+        return constructor({mongoose})
+    })
 }
 
 module.exports = startWorker

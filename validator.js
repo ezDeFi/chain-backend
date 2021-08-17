@@ -13,7 +13,7 @@ function standardizeStartConfiguration(config) {
         throw new ChainBackendError('undefined configuration')
     }
 
-    _validateConsumerList(config.consumers)
+    _validateConsumerConstructors(config.consumerConstructors)
     _validateMongoose(config.mongoose)
     _validateEthersProvider(config.ethersProvider)
     _validateHeadProcessorConfig(config.headProcessorConfig)
@@ -22,15 +22,15 @@ function standardizeStartConfiguration(config) {
     return config
 }
 
-function _validateConsumerList(consumers) {
-    if (Array.isArray(consumers) === false || consumers.length === 0) {
-        throw new ChainBackendError('invalid configuration "consumers"')
+function _validateConsumerConstructors(constructors) {
+    if (Array.isArray(constructors) === false || constructors.length === 0) {
+        throw new ChainBackendError('invalid configuration "consumerConstructors"')
     }
 
-    for (let index = 0; index < consumers.length; ++index) {
-        if (!_isValidConsumer(consumers[index])) {
+    for (let index = 0; index < constructors.length; ++index) {
+        if (typeof constructors[index] !== 'function') {
             throw new ChainBackendError(
-                `invalid configuration "consumers[${index}]"`
+                `invalid configuration "consumerConstructors[${index}]"`
             )
         }
     }
@@ -82,7 +82,7 @@ function _isValidProcessorConfig(config) {
     if (
         typeof config !== 'object' ||
         typeof config.getLogs !== 'function' ||
-        typeof config.getConcurency !== 'function' ||
+        typeof config.getConcurrency !== 'function' ||
         typeof config.getSize !== 'function'
     ) {
         return false
