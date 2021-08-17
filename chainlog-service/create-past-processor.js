@@ -2,7 +2,7 @@ const Bluebird = require('bluebird')
 const _ = require('lodash')
 const { mergeRequests } = require("../helpers/logs")
 
-const createProccesor = ({config, consumers, mongoose}) => {
+const createPastProcessor = ({config, consumers, mongoose}) => {
     const _splitChunks = (from, to, count) => {
         // console.log('slpitChunks', {from, to, count})
         const size = Math.round((to - from) / count)
@@ -72,4 +72,4 @@ const createProccesor = ({config, consumers, mongoose}) => {
     }
 }
 
-exports.createProccesor = createProccesor
+module.exports = createPastProcessor

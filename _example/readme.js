@@ -2,14 +2,14 @@
 
 const { ethers } = require('ethers')
 const {JsonRpcProvider} = require('@ethersproject/providers')
-const {Mongoose} = require('mongoose')
+const {Mongoose, Schema} = require('mongoose')
+const { ZERO_HASH } = require('../helpers/constants').hexes
+const contractABI = require('../_ABIs/SFarm.json').abi
 const {
     startWorker, 
     createAccumulatorConsumer,
     createChainlogConfig
 } = require('../index')
-const { ZERO_HASH } = require('../helpers/constants').hexes
-const contractABI = require('../ABIs/SFarm.json').abi
 
 async function _createMongoose() {
     let mongoose = new Mongoose()
@@ -55,7 +55,9 @@ function createConsumer(config) {
 
 async function main() {
     let mongoose = await _createMongoose()
-    let ethersProvider = new JsonRpcProvider('https://bsc-dataseed.binance.org')
+    let ethersProvider = new JsonRpcProvider(
+        'https://bsc-dataseed.binance.org'
+    )
     let headProcessorConfig = createChainlogConfig({
         type: 'HEAD',
         config: {
@@ -88,4 +90,7 @@ async function main() {
     })
 }
 
-main().catch(console.error)
+main().catch(error => {
+    console.error(error)
+    process.exit(1)
+})

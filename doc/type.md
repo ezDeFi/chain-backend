@@ -3,7 +3,8 @@
 ```js
 // Type WorkerConfiguration {Object}
 //  * consumerConstructors {Array<ConsumerConstructor>}
-//  * mongoose {mongoose.Mongoose}
+//  * mongoose {mongoose.Mongoose} There are reserved model's names and must
+//    not use by outside of function `startWorker()`: 'Config', 'LogsState'.
 //  * ethersProvider {ethers.providers.JsonRpcProvider}
 //  * pastProcessorConfig {ProcessorConfig}
 //  * headProcessorConfig {ProcessorConfig}

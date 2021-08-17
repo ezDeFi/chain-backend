@@ -1,5 +1,4 @@
-
-function createChainlogConfig({type, config, hardCap, target}) {
+function createConfig({type, config, hardCap, target}) {
     const getConcurrency = () => {
         return config.concurrency || 1
     }
@@ -81,4 +80,4 @@ function createChainlogConfig({type, config, hardCap, target}) {
     }
 }
 
-module.exports = createChainlogConfig
+module.exports = createConfig

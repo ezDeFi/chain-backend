@@ -2,7 +2,7 @@ const Bluebird = require('bluebird')
 const _ = require('lodash')
 const { mergeRequests } = require("../helpers/logs")
 
-const createProccesor = ({config, consumers, mongoose}) => {
+function createHeadProcessor({config, consumers, mongoose}) {
     // rollback the lastHead
     // ConfigModel.updateOne(
     //     { key: 'lastHead' },
@@ -77,4 +77,4 @@ const createProccesor = ({config, consumers, mongoose}) => {
     }
 }
 
-exports.createProccesor = createProccesor
+module.exports = createHeadProcessor

@@ -1,9 +1,11 @@
 'use strict'
 
-const HeadProcessor = require('./services/chainlog-head-processor')
-const PastProcessor = require('./services/chainlog-past-processor')
-const mongooseSchema = require('./mongoose-schema')
+const mongoose = require('./mongoose')
 const {standardizeStartConfiguration} = require('./validator')
+const {
+    createHeadProcessor,
+    createPastProcessor
+} = require('./chainlog-service')
 
 // Input
 //  * config {WorkerConfiguration}
@@ -16,18 +18,18 @@ async function startWorker(config) {
 // Input
 //  * config {WorkerConfiguration}
 async function _startWorker(config) {
-    _applyMongooseSchema(config.mongoose)
+    mongoose.applySchemaList(config.mongoose)
 
     let consumers = _createConsumers(
         config.consumerConstructors, 
         config.mongoose
     )
-    let headProcessor = HeadProcessor.createProccesor({
+    let headProcessor = createHeadProcessor({
         consumers: consumers,
         config: config.headProcessorConfig,
         mongoose: config.mongoose
     })
-    let pastProcessor = PastProcessor.createProccesor({
+    let pastProcessor = createPastProcessor({
         consumers: consumers,
         config: config.pastProcessorConfig,
         mongoose: config.mongoose
@@ -68,12 +70,6 @@ async function _startWorker(config) {
             console.error(error)
             process.exit(1)
         })
-}
-
-function _applyMongooseSchema(mongoose) {
-    mongoose.model("Config", mongooseSchema.ConfigSchema),
-    mongoose.model("LogsState", mongooseSchema.LogsStateSchema),
-    mongoose.model("Memoize", mongooseSchema.MemoizeSchema)
 }
 
 function _createConsumers(constructors, mongoose) {

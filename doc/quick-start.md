@@ -1,16 +1,18 @@
 # Quick Start
 
 ```js
+'use strict'
+
 const { ethers } = require('ethers')
 const {JsonRpcProvider} = require('@ethersproject/providers')
-const {Mongoose} = require('mongoose')
+const {Mongoose, Schema} = require('mongoose')
+const { ZERO_HASH } = require('../helpers/constants').hexes
+const contractABI = require('../_ABIs/SFarm.json').abi
 const {
     startWorker, 
     createAccumulatorConsumer,
     createChainlogConfig
 } = require('../index')
-const { ZERO_HASH } = require('../helpers/constants').hexes
-const contractABI = require('../ABIs/SFarm.json').abi
 
 async function _createMongoose() {
     let mongoose = new Mongoose()
@@ -20,6 +22,8 @@ async function _createMongoose() {
         useNewUrlParser: true, 
         useUnifiedTopology: true
     })
+
+    mongoose.model('Config', new Schema())
 
     return mongoose
 }
@@ -91,5 +95,8 @@ async function main() {
     })
 }
 
-main().catch(console.error)
+main().catch(error => {
+    console.error(error)
+    process.exit(1)
+})
 ```
