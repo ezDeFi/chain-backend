@@ -1,11 +1,11 @@
 const { filterLogs } = require('../helpers/logs')
 const { diff } = require('jsondiffpatch')
 
-function createSyncConsumer({key, filter, genesis, applyLogs, rangeLimit, mongo}) {
+function createSyncConsumer({key, filter, genesis, applyLogs, rangeLimit, mongoose}) {
     // reset the state
     // LogsStateModel.deleteOne({ key }).then(console.error).catch(console.error)
 
-    let {LogsStateModel} = mongo
+    let LogsStateModel = mongoose.model('LogsState')
     const processLogs = async ({ request, logs, fromBlock, toBlock, lastHead, head }) => {
         // TODO: handle synchronization
 

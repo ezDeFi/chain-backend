@@ -1,6 +1,9 @@
 # APIs
 
 ```js
+// Notes:
+//  * See './type.md' for more details of related types.
+
 const {
     startWorker, 
     createAccumulatorConsumer,
@@ -26,7 +29,29 @@ async function startWorker(config) {}
 // Output {Consumer}
 function createAccumulatorConsumer(config) {}
 
+// Description
+// ?
+//
+// Input
+//  * config {SyncConsumerConfig}
+//
+// Output {Consumer}
 function createSyncConsumer() {}
+
+// Description
+// ?
+//
+// Input {UpdateConsumerConfig}
+//
+// Output {Consumer}
 function createUpdateConsumer() {}
-function createChainlogConfig() {}
+
+// Description
+// ?
+//
+// Input 
+//  * options {CreateChainlogConfigOptions}
+//
+// Output {ProcessorConfig}
+function createChainlogConfig(options) {}
 ```

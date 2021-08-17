@@ -25,12 +25,36 @@
 
 // Type AccumulatorConsumerConfig
 //  * key {String}
-//  * filter {ethers.Contract.Filter}
-//  * genesis {String}
-//  * mongo {MongoService}
+//  * filter {Object ?}
+//  * genesis {String} A number as string.
 //  * applyLogs {function ?}
+//  * mongoose {mongoose.Mongoose}
+
+
+// Type SyncConsumerConfig {Object}
+//  * key {String}
+//  * filter {Object ?}
+//  * genesis {String} A number as string.
+//  * applyLogs {function ?}
+//  * rangeLimit {Number}
+//  * mongoose {mongoose.Mongoose}
+
+
+// Type UpdateConsumerConfig {Object}
+//  * key {String}
+//  * filter {Object ?}
+//  * genesis {String} A number as string.
+//  * applyLogs {function ?}
+//  * mongoose {mongoose.Mongoose}
+
 
 // Type Consumer {Object}
 //  * key {String}
 //  * getRequests {function(?)}
+
+// Type CreateChainlogConfigOptions {Object}
+//  * options.type {String}
+//  * options.config {?}
+//  * options.hardCap {Number}
+//  * options.target {Number}
 ```

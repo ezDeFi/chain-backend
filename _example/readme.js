@@ -2,7 +2,7 @@
 
 const { ethers } = require('ethers')
 const {JsonRpcProvider} = require('@ethersproject/providers')
-const {Mongoose, Schema} = require('mongoose')
+const {Mongoose} = require('mongoose')
 const { ZERO_HASH } = require('../helpers/constants').hexes
 const contractABI = require('../_ABIs/SFarm.json').abi
 const {
