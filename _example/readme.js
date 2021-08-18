@@ -3,8 +3,8 @@
 const { ethers } = require('ethers')
 const {JsonRpcProvider} = require('@ethersproject/providers')
 const {Mongoose} = require('mongoose')
-const { ZERO_HASH } = require('../lib/constants').hexes
-const contractABI = require('../_ABIs/SFarm.json').abi
+const { ZERO_HASH } = require('./constants')
+const contractABI = require('./abi/SFarm.json').abi
 const {
     startWorker, 
     accumulationConsumer,

@@ -4,7 +4,6 @@
 /test/
 /doc/
 /tmp/
-/_ABIs/
 /_example/
 /package-lock.json
 /*.tgz
