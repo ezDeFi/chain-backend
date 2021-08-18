@@ -1,6 +1,6 @@
 const path = require("path")
 const fs = require('fs')
-const {startWorker} = require('../index')
+const {startWorker} = require('../lib')
 
 function _loadConsumerFactories() {
     let consumerDir = path.join(__dirname, 'consumers')

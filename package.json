@@ -1,6 +1,6 @@
 {
   "name": "chain-backend",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "test": "mocha"
@@ -15,5 +15,22 @@
   },
   "devDependencies": {
     "mocha": "^6.2.2"
-  }
+  },
+  "description": "A library to retrieve and strore data from Binance Smart Chain network",
+  "main": "lib/index.js",
+  "directories": {
+    "doc": "doc",
+    "lib": "lib",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ezDeFi/chain-backend.git"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/ezDeFi/chain-backend/issues"
+  },
+  "homepage": "https://github.com/ezDeFi/chain-backend#readme"
 }

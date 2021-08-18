@@ -3,13 +3,13 @@
 const { ethers } = require('ethers')
 const {JsonRpcProvider} = require('@ethersproject/providers')
 const {Mongoose} = require('mongoose')
-const { ZERO_HASH } = require('../helpers/constants').hexes
+const { ZERO_HASH } = require('../lib/constants').hexes
 const contractABI = require('../_ABIs/SFarm.json').abi
 const {
     startWorker, 
-    createAccumulatorConsumer,
-    createChainlogConfig
-} = require('../index')
+    accumulationConsumer,
+    chainlogProcessorConfig
+} = require('../lib')
 
 async function _createMongoose() {
     let mongoose = new Mongoose()
@@ -29,7 +29,7 @@ function createConsumer(config) {
         contractABI
     )
 
-    return createAccumulatorConsumer({
+    return accumulationConsumer({
         key: 'consumer_1',
         filter: sfarmContract.filters.AuthorizeAdmin(null, null),
         genesis: 8967359,
@@ -58,7 +58,7 @@ async function main() {
     let ethersProvider = new JsonRpcProvider(
         'https://bsc-dataseed.binance.org'
     )
-    let headProcessorConfig = createChainlogConfig({
+    let headProcessorConfig = chainlogProcessorConfig({
         type: 'HEAD',
         config: {
             provider: ethersProvider,
@@ -68,7 +68,7 @@ async function main() {
         hardCap: 4000,
         target: 500,
     })
-    let pastProcessorConfig = createChainlogConfig({
+    let pastProcessorConfig = chainlogProcessorConfig({
         type: 'PAST',
         config: {
             provider: ethersProvider,

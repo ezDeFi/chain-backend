@@ -6,8 +6,8 @@
 //  * mongoose {mongoose.Mongoose} There are reserved model's names and must
 //    not use by outside of function `startWorker()`: 'Config', 'LogsState'.
 //  * ethersProvider {ethers.providers.JsonRpcProvider}
-//  * pastProcessorConfig {ProcessorConfig}
-//  * headProcessorConfig {ProcessorConfig}
+//  * pastProcessorConfig {ChainlogProcessorConfig}
+//  * headProcessorConfig {ChainlogProcessorConfig}
 
 // Type ConsumerConstructor {function(config)}
 //
@@ -17,7 +17,7 @@
 // Output {Consumer}
 
 
-// Type ProcessorConfig {Object}
+// Type ChainlogProcessorConfig {Object}
 //  * getLogs {function ?}
 //  * getConcurrency {function ?}
 //  * getSize {function ?}
