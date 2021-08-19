@@ -1,10 +1,6 @@
 /.git/
-/.github/
 /node_modules/
-/test/
-/doc/
 /tmp/
-/_example/
 /package-lock.json
 /*.tgz
 /*.swp
