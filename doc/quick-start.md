@@ -1,102 +1,39 @@
 # Quick Start
 
-```js
-'use strict'
+```bash
+# STEP 1.
+#
+# Make sure following package is installed: 
+#   * node v10
+#   * npm v6
+#   * mongo-server v4
+#
+# Make sure it is able to:
+#   * Connect to mongo server with URL: "mongodb://localhost/sfarm".
 
-const { ethers } = require('ethers')
-const {JsonRpcProvider} = require('@ethersproject/providers')
-const {Mongoose, Schema} = require('mongoose')
-const { ZERO_HASH } = require('../helpers/constants').hexes
-const contractABI = require('../_ABIs/SFarm.json').abi
-const {
-    startWorker, 
-    createAccumulatorConsumer,
-    createChainlogConfig
-} = require('../index')
+# STEP 2.
+# 
+# Create a directory to work in.
+mkdir quick-start
+cd quick-start
 
-async function _createMongoose() {
-    let mongoose = new Mongoose()
-    let endpoint = 'mongodb://localhost/sfarm'
+# STEP 3.
+#
+# Create a file which is store a contract ABI.
+# Get content of this file below.
+touch sfarm-abi.json
 
-    await mongoose.connect(endpoint, { 
-        useNewUrlParser: true, 
-        useUnifiedTopology: true
-    })
+# STEP 4.
+#
+# Create a worker to retrieve and store data from BSC network.
+# Get content of this file below.
+touch worker.js
 
-    mongoose.model('Config', new Schema())
-
-    return mongoose
-}
-
-function createConsumer(config) {
-    let sfarmContract = new ethers.Contract(
-        '0x8141AA6e0f40602550b14bDDF1B28B2a0b4D9Ac6', 
-        contractABI
-    )
-
-    return createAccumulatorConsumer({
-        key: 'consumer_1',
-        filter: sfarmContract.filters.AuthorizeAdmin(null, null),
-        genesis: 8967359,
-        mongoose: config.mongoose,
-        applyLogs: (value, logs) => {
-            value = {...value}
-            logs.forEach(log => {
-                const address = ethers.utils.getAddress(
-                    '0x'+log.topics[1].slice(26)
-                )
-
-                if (log.data != ZERO_HASH) {
-                    value[address] = true
-                } else {
-                    delete value[address]
-                }
-            })
-
-            return value
-        }
-    })
-}
-
-async function main() {
-    let mongoose = await _createMongoose()
-    let ethersProvider = new JsonRpcProvider(
-        'https://bsc-dataseed.binance.org'
-    )
-    let headProcessorConfig = createChainlogConfig({
-        type: 'HEAD',
-        config: {
-            provider: ethersProvider,
-            size: 6,
-            concurrency: 1,
-        },
-        hardCap: 4000,
-        target: 500,
-    })
-    let pastProcessorConfig = createChainlogConfig({
-        type: 'PAST',
-        config: {
-            provider: ethersProvider,
-            size: 4000,
-            concurrency: 10,
-        },
-        hardCap: 4000,
-        target: 500,
-    })
-
-    await startWorker({
-        consumerConstructors: [
-            createConsumer
-        ],
-        mongoose: mongoose,
-        ethersProvider: ethersProvider,
-        headProcessorConfig: headProcessorConfig,
-        pastProcessorConfig: pastProcessorConfig
-    })
-}
-
-main().catch(error => {
-    console.error(error)
-    process.exit(1)
-})
+# Step 5.
+#
+# Test it by run for a while.
+timeout 15 node worker.js
 ```
+
+* File [sfarm-abi.json](../test/quick-start/sfarm-abi.json)
+* File [worker.js](../test/quick-start/worker.js)

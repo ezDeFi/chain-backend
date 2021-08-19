@@ -24,6 +24,9 @@ const {startWorker} = require('chain-backend')
 //  * config.ethersProvider {ethers.providers.JsonRpcProvider}
 //  * config.pastProcessorConfig {ChainlogProcessorConfig}
 //  * config.headProcessorConfig {ChainlogProcessorConfig}
+//
+// Errors
+//  * ChainBackendError
 async function startWorker(config) {}
 ```
 
@@ -38,7 +41,7 @@ const {accumulationConsumer} = require('chain-backend').factory
 //  * config.filter {ethers.Contract.Filter}
 //  * config.genesis {String}
 //  * config.applyLogs {applyLogsFunction}
-//  * config.mongoose {mongoose.Mongoose}
+//  * config.mongoose {ChainBackendMongoose}
 //
 // Output {Consumer}
 function accumulationConsumer(config) {}
@@ -56,7 +59,7 @@ const {synchronizationConsumer} = require('chain-backend').factory
 //  * config.genesis {String} A number as string.
 //  * config.applyLogs {applyLogsFunction}
 //  * config.rangeLimit {Number}
-//  * config.mongoose {mongoose.Mongoose}
+//  * config.mongoose {ChainBackendMongoose}
 //
 // Output {Consumer}
 function synchronizationConsumer() {}
@@ -74,7 +77,7 @@ const {updateConsumer} = require('chain-backend').factory
 //  * config.filter {ethers.Contract.Filter}
 //  * config.genesis {String} A number as string.
 //  * config.applyLogs {function applyLogsFunction}
-//  * config.mongoose {mongoose.Mongoose}
+//  * config.mongoose {ChainBackendMongoose}
 //
 // Output {Consumer}
 function updateConsumer() {}
@@ -158,4 +161,10 @@ function chainlogProcessorConfig({type, config, hardCap=4000, target=500}) {}
 //  * logs {Array<ethers.providers.Log>}
 //
 // Output {String}
+
+// Type ChainBackendMongoose {mongoose.Mongoose}
+//
+// Description
+//  * It is an instance of mongoose.Mongoose which is apply internal schemas by
+//    'applySchemaList()' from module './lib/mongoose.js'.
 ```
