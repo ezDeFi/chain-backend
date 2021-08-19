@@ -2,11 +2,15 @@
   "name": "chain-backend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=10 <11"
+  },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha --recursive --timeout 20000 'test/**/*.spec.js'"
   },
   "dependencies": {
     "@ethersproject/providers": "https://github.com/ezDeFi/ethers.js/releases/download/v5.3.1.1/ethers_providers.tar.gz",
+    "@trop/gear": "^0.4.2",
     "bsc_util": "^0.4.0",
     "ethers": "^5.1.4",
     "json-stable-stringify": "^1.0.1",
@@ -19,9 +23,7 @@
   "description": "A library to retrieve and strore data from Binance Smart Chain network",
   "main": "lib/index.js",
   "directories": {
-    "doc": "doc",
-    "lib": "lib",
-    "test": "test"
+    "lib": "lib"
   },
   "repository": {
     "type": "git",
