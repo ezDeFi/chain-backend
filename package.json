@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=10 <11"
+    "node": ">=14"
   },
   "scripts": {
+    "n": "n $(cat .node-version)",
     "test": "mocha --recursive --timeout 20000 'test/**/*.spec.js'"
   },
   "dependencies": {
