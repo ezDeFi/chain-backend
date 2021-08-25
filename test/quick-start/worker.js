@@ -56,38 +56,36 @@ function createConsumer(config) {
 
 async function main() {
     let mongoose = await createMongoose()
-    let ethersProvider = new JsonRpcProvider(
+    let provider = new JsonRpcProvider(
         'https://bsc-dataseed.binance.org'
     )
-    let headProcessorConfig = chainlogProcessorConfig({
-        type: 'HEAD',
-        config: {
-            provider: ethersProvider,
+
+    const processorConfigs = {
+        merge: chainlogProcessorConfig({
+            type: 'MERGE',
+            provider,
             size: 6,
             concurrency: 1,
-        },
-        hardCap: 4000,
-        target: 500,
-    })
-    let pastProcessorConfig = chainlogProcessorConfig({
-        type: 'PAST',
-        config: {
-            provider: ethersProvider,
+            hardCap: 4000,
+            target: 500,
+        }),
+        partition: chainlogProcessorConfig({
+            type: 'PARTN',
+            provider,
             size: 4000,
-            concurrency: 10,
-        },
-        hardCap: 4000,
-        target: 500,
-    })
+            concurrency: 2,
+            hardCap: 4000,
+            target: 500,
+        }),
+    }
 
     await startWorker({
         consumerConstructors: [
             createConsumer
         ],
         mongoose: mongoose,
-        ethersProvider: ethersProvider,
-        headProcessorConfig: headProcessorConfig,
-        pastProcessorConfig: pastProcessorConfig
+        ethersProvider: provider,
+        processorConfigs,
     })
 }
 

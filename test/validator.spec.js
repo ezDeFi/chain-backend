@@ -13,16 +13,18 @@ describe('validator.standardizeStartConfiguration', () => {
             ],
             mongoose: new Mongoose('http://foo.bar/database'),
             ethersProvider: new JsonRpcProvider(),
-            headProcessorConfig: {
-                getLogs: function() {},
-                getConcurrency: function() {},
-                getSize: function() {}
+            processorConfigs: {
+                merge: {
+                    getLogs: function() {},
+                    getConcurrency: function() {},
+                    getSize: function() {}
+                },
+                partition: {
+                    getLogs: function() {},
+                    getConcurrency: function() {},
+                    getSize: function() {}
+                },
             },
-            pastProcessorConfig: {
-                getLogs: function() {},
-                getConcurrency: function() {},
-                getSize: function() {}
-            }
         }
         let validConfig = standardizeStartConfiguration(config)
 
@@ -48,16 +50,18 @@ describe('validator.standardizeStartConfiguration', () => {
                     consumerConstructors: undefined,
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: new JsonRpcProvider(),
-                    headProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
+                    processorConfigs: {
+                        merge: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
+                        partition: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
                     },
-                    pastProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
-                    }
                 })
             },
             {
@@ -76,16 +80,18 @@ describe('validator.standardizeStartConfiguration', () => {
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: new JsonRpcProvider(),
-                    headProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
+                    processorConfigs: {
+                        merge: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
+                        partition: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
                     },
-                    pastProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
-                    }
                 })
             },
             {
@@ -104,16 +110,18 @@ describe('validator.standardizeStartConfiguration', () => {
                     ],
                     mongoose: undefined,
                     ethersProvider: new JsonRpcProvider(),
-                    headProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
+                    processorConfigs: {
+                        merge: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
+                        partition: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
                     },
-                    pastProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
-                    }
                 })
             },
             {
@@ -132,16 +140,18 @@ describe('validator.standardizeStartConfiguration', () => {
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: undefined,
-                    headProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
+                    processorConfigs: {
+                        merge: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
+                        partition: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
                     },
-                    pastProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
-                    }
                 })
             },
             {
@@ -151,7 +161,7 @@ describe('validator.standardizeStartConfiguration', () => {
         )
     })
 
-    it('config.headProcessorConfig is invalid throws error', () => {
+    it('config.processorConfigs.merge is invalid throws error', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
@@ -160,22 +170,24 @@ describe('validator.standardizeStartConfiguration', () => {
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: new JsonRpcProvider(),
-                    headProcessorConfig: {},
-                    pastProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
-                    }
+                    processorConfigs: {
+                        merge: {},
+                        partition: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
+                    },
                 })
             },
             {
                 name: 'ChainBackendError',
-                message: 'invalid configuration "headProcessorConfig"'
+                message: 'invalid configuration "processorConfigs"'
             }
         )
     })
 
-    it('config.pastProcessorConfig is invalid throws error', () => {
+    it('config.processorConfigs.partition is invalid throws error', () => {
         assert.throws(
             () => {
                 standardizeStartConfiguration({
@@ -184,17 +196,19 @@ describe('validator.standardizeStartConfiguration', () => {
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: new JsonRpcProvider(),
-                    headProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
+                    processorConfigs: {
+                        merge: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
+                        partition: {},
                     },
-                    pastProcessorConfig: {}
                 })
             },
             {
                 name: 'ChainBackendError',
-                message: 'invalid configuration "pastProcessorConfig"'
+                message: 'invalid configuration "processorConfigs"'
             }
         )
     })
@@ -208,15 +222,17 @@ describe('validator.standardizeStartConfiguration', () => {
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
                     ethersProvider: new JsonRpcProvider(),
-                    headProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
-                    },
-                    pastProcessorConfig: {
-                        getLogs: function() {},
-                        getConcurrency: function() {},
-                        getSize: function() {}
+                    processorConfigs: {
+                        merge: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
+                        partition: {
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
                     },
                     additionalProperty: {}
                 })
