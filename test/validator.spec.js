@@ -4,6 +4,8 @@ const assert = require('assert')
 const {JsonRpcProvider} = require('@ethersproject/providers')
 const {Mongoose} = require('mongoose')
 const {standardizeStartConfiguration} = require('../lib/validator')
+const provider = new JsonRpcProvider()
+const getProvider = () => provider
 
 describe('validator.standardizeStartConfiguration', () => {
     it('return valid config', () => {
@@ -12,14 +14,15 @@ describe('validator.standardizeStartConfiguration', () => {
                 function() {}
             ],
             mongoose: new Mongoose('http://foo.bar/database'),
-            ethersProvider: new JsonRpcProvider(),
             processorConfigs: {
                 merge: {
+                    getProvider,
                     getLogs: function() {},
                     getConcurrency: function() {},
                     getSize: function() {}
                 },
                 partition: {
+                    getProvider,
                     getLogs: function() {},
                     getConcurrency: function() {},
                     getSize: function() {}
@@ -49,14 +52,15 @@ describe('validator.standardizeStartConfiguration', () => {
                 standardizeStartConfiguration({
                     consumerConstructors: undefined,
                     mongoose: new Mongoose('http://foo.bar/database'),
-                    ethersProvider: new JsonRpcProvider(),
                     processorConfigs: {
                         merge: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
                         },
                         partition: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
@@ -79,14 +83,15 @@ describe('validator.standardizeStartConfiguration', () => {
                         {}
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
-                    ethersProvider: new JsonRpcProvider(),
                     processorConfigs: {
                         merge: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
                         },
                         partition: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
@@ -109,14 +114,15 @@ describe('validator.standardizeStartConfiguration', () => {
                         function() {}
                     ],
                     mongoose: undefined,
-                    ethersProvider: new JsonRpcProvider(),
                     processorConfigs: {
                         merge: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
                         },
                         partition: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
@@ -139,14 +145,15 @@ describe('validator.standardizeStartConfiguration', () => {
                         function() {}
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
-                    ethersProvider: undefined,
                     processorConfigs: {
                         merge: {
+                            getProvider: () => {},
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
                         },
                         partition: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
@@ -169,10 +176,10 @@ describe('validator.standardizeStartConfiguration', () => {
                         function() {}
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
-                    ethersProvider: new JsonRpcProvider(),
                     processorConfigs: {
                         merge: {},
                         partition: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
@@ -195,9 +202,9 @@ describe('validator.standardizeStartConfiguration', () => {
                         function() {}
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
-                    ethersProvider: new JsonRpcProvider(),
                     processorConfigs: {
                         merge: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
@@ -221,14 +228,15 @@ describe('validator.standardizeStartConfiguration', () => {
                         function() {}
                     ],
                     mongoose: new Mongoose('http://foo.bar/database'),
-                    ethersProvider: new JsonRpcProvider(),
                     processorConfigs: {
                         merge: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}
                         },
                         partition: {
+                            getProvider,
                             getLogs: function() {},
                             getConcurrency: function() {},
                             getSize: function() {}

@@ -21,9 +21,7 @@ const {startWorker} = require('chain-backend')
 //  * config.consumerConstructors {Array<ConsumerConstructor>}
 //  * config.mongoose {mongoose.Mongoose} There are reserved model's names and
 //    must not use by outside of this function: 'Config', 'LogsState'.
-//  * config.ethersProvider {ethers.providers.JsonRpcProvider}
-//  * config.pastProcessorConfig {ChainlogProcessorConfig}
-//  * config.headProcessorConfig {ChainlogProcessorConfig}
+//  * config.processorConfigs {Object}
 //
 // Errors
 //  * ChainBackendError
@@ -90,7 +88,7 @@ const {chainlogProcessorConfig} = require('chain-backend')
 
 // Description
 //  * Create a configuration which is pass to 'startWorker(config)' as input
-//  'config.headProcessorConfig' and 'pastProcessorConfig'.
+//  'config.processorConfigs'.
 //
 // Input
 //  * options {Object}

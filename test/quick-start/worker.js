@@ -84,7 +84,6 @@ async function main() {
             createConsumer
         ],
         mongoose: mongoose,
-        ethersProvider: provider,
         processorConfigs,
     })
 }
