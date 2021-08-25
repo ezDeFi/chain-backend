@@ -1,0 +1,11 @@
+name: Deployment Workflow
+on: 
+    push:
+        branches: [not_existed_branch]
+jobs:
+    deploy:
+        name: Build, Pack and Deploy to Servers
+        runs-on: ubuntu-20.04
+        steps:
+            - name: Checkout Source Code
+              uses: actions/checkout@v2
