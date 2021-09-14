@@ -247,7 +247,7 @@ describe('validator.standardizeStartConfiguration', () => {
             },
             {
                 name: 'ChainBackendError',
-                message: 'configuration has additional properties'
+                message: 'configuration has unknown property: additionalProperty'
             }
         )
     })
