@@ -22,7 +22,7 @@ describe('validator.standardizeStartConfiguration', () => {
                     getSize: function() {}
                 },
                 partition: {
-                    getProvider,
+                    getProvider: () => [provider, provider],
                     getLogs: function() {},
                     getConcurrency: function() {},
                     getSize: function() {}
