@@ -17,6 +17,7 @@
     "ethers": "^5.1.4",
     "json-stable-stringify": "^1.0.1",
     "jsondiffpatch": "^0.4.1",
+    "node-fetch": "2",
     "mongoose": "^5.7.6"
   },
   "devDependencies": {
