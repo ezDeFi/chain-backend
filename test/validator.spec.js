@@ -30,8 +30,6 @@ describe('validator.standardizeStartConfiguration', () => {
             },
         }
         let validConfig = standardizeStartConfiguration(config)
-
-        assert.deepStrictEqual(validConfig, config)
     })
 
     it('config is undefined throws error', () => {

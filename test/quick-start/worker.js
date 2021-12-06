@@ -85,6 +85,7 @@ async function main() {
         ],
         mongoose: mongoose,
         processorConfigs,
+        safeDepth: 4,
     })
 }
 
