@@ -8,7 +8,7 @@ const {
     startWorker,
     accumulationConsumerFactory,
     chainlogProcessorConfig
-} = require('chain-backend')
+} = require('../../lib/index')
 const { AssistedJsonRpcProvider } = require('assisted-json-rpc-provider')
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -62,7 +62,7 @@ async function main() {
         {
             rateLimitCount: 5,
             rateLimitDuration: 1000,
-            rangeThreshold: 5000,
+            rangeThreshold: 4000,
             maxResults: 1000,
             url: 'https://api.bscscan.com/api',
             apiKeys: ['JHJMRMD22RVUMHKFM1KRNXCYI2S6M85Y22', 'ZK82FBHZBUD9BDSB9SCS1NVT3K7Y8R2TKF', 'YD1424ACBTAZBRJWEIHAPHFZMT69MZXBBI'],
@@ -81,7 +81,7 @@ async function main() {
         partition: chainlogProcessorConfig({
             type: 'PARTN',
             provider,
-            size: 100000,
+            size: 4000,
             concurrency: 2,
             hardCap: 4000,
             target: 500,
