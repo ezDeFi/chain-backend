@@ -9,6 +9,7 @@ const {
     accumulationConsumerFactory,
     chainlogProcessorConfig
 } = require('chain-backend')
+const { AssistedJsonRpcProvider } = require('assisted-json-rpc-provider')
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000'
 
@@ -56,8 +57,16 @@ function createConsumer(config) {
 
 async function main() {
     let mongoose = await createMongoose()
-    let provider = new JsonRpcProvider(
-        'https://bsc-dataseed.binance.org'
+    let provider = new AssistedJsonRpcProvider(
+        new JsonRpcProvider('https://bsc-dataseed.binance.org'),
+        {
+            rateLimitCount: 5,
+            rateLimitDuration: 1000,
+            rangeThreshold: 5000,
+            maxResults: 1000,
+            url: 'https://api.bscscan.com/api',
+            apiKeys: ['JHJMRMD22RVUMHKFM1KRNXCYI2S6M85Y22', 'ZK82FBHZBUD9BDSB9SCS1NVT3K7Y8R2TKF', 'YD1424ACBTAZBRJWEIHAPHFZMT69MZXBBI'],
+        }
     )
 
     const processorConfigs = {
@@ -72,7 +81,7 @@ async function main() {
         partition: chainlogProcessorConfig({
             type: 'PARTN',
             provider,
-            size: 4000,
+            size: 100000,
             concurrency: 2,
             hardCap: 4000,
             target: 500,
