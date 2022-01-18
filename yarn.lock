@@ -424,6 +424,15 @@ argparse@^1.0.7:
   dependencies:
     sprintf-js "~1.0.2"
 
+"assisted-json-rpc-provider@https://github.com/launchzone/AssistedJsonRpcProvider.git":
+  version "0.1.0"
+  resolved "https://github.com/launchzone/AssistedJsonRpcProvider.git#c95fec665455cca5be6fe64cd9cc4b222b8077c7"
+  dependencies:
+    ethers "^5.5.3"
+    lodash "^4.17.21"
+    node-fetch "2"
+    throttled-queue "^2.1.2"
+
 balanced-match@^1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-1.0.2.tgz#e83e3a7e3f300b34cb9d87f615fa0cbf357690ee"

@@ -13,6 +13,7 @@
   "dependencies": {
     "@ethersproject/providers": "https://github.com/ezDeFi/ethers.js/releases/download/v5.3.1.1/ethers_providers.tar.gz",
     "@trop/gear": "^0.4.2",
+    "assisted-json-rpc-provider": "https://github.com/launchzone/AssistedJsonRpcProvider.git",
     "bsc_util": "^0.4.0",
     "ethers": "^5.1.4",
     "json-stable-stringify": "^1.0.1",
