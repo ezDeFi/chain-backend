@@ -2,6 +2,7 @@
 
 const { ethers } = require('ethers')
 const {JsonRpcProvider} = require('@ethersproject/providers')
+const { AssistedJsonRpcProvider } = require('assisted-json-rpc-provider')
 const {Mongoose} = require('mongoose')
 const sfarmAbi = require('./sfarm-abi.json').abi
 const {
@@ -9,7 +10,6 @@ const {
     accumulationConsumerFactory,
     chainlogProcessorConfig
 } = require('../../lib/index')
-const { AssistedJsonRpcProvider } = require('assisted-json-rpc-provider')
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000'
 
