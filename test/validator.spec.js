@@ -14,6 +14,7 @@ describe('validator.standardizeStartConfiguration', () => {
                 function() {}
             ],
             mongoose: new Mongoose('http://foo.bar/database'),
+            mongoosePrefix: 'prefix-',
             processorConfigs: {
                 merge: {
                     getProvider,
@@ -134,7 +135,39 @@ describe('validator.standardizeStartConfiguration', () => {
             }
         )
     })
-    
+
+    it('config.mongoosePrefix is invalid throws error', () => {
+        assert.throws(
+            () => {
+                standardizeStartConfiguration({
+                    consumerConstructors: [
+                        function() {}
+                    ],
+                    mongoose: new Mongoose('http://foo.bar/database'),
+                    mongoosePrefix: {},
+                    processorConfigs: {
+                        merge: {
+                            getProvider,
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
+                        partition: {
+                            getProvider,
+                            getLogs: function() {},
+                            getConcurrency: function() {},
+                            getSize: function() {}
+                        },
+                    },
+                })
+            },
+            {
+                name: 'ChainBackendError',
+                message: 'invalid configuration "mongoosePrefix"'
+            }
+        )
+    })
+
     it('config.ethersProvider is invalid throws error', () => {
         assert.throws(
             () => {
