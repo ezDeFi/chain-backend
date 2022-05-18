@@ -36,6 +36,7 @@ function createConsumer(config) {
         filter: sfarmContract.filters.AuthorizeAdmin(null, null),
         genesis: 8967359,
         mongoose: config.mongoose,
+        mongoosePrefix: config.mongoosePrefix,
         applyLogs: (value, logs) => {
             value = {...value}
             logs.forEach(log => {
