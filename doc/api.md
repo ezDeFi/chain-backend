@@ -76,6 +76,7 @@ const {updateConsumer} = require('chain-backend').factory
 //  * config.genesis {String} A number as string.
 //  * config.applyLogs {function applyLogsFunction}
 //  * config.mongoose {ChainBackendMongoose}
+//  * config.maxPastRange {number}
 //
 // Output {Consumer}
 function updateConsumer() {}
