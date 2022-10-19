@@ -78,6 +78,7 @@ async function main() {
             concurrency: 1,
             hardCap: 4000,
             target: 500,
+            range:10
         }),
         partition: chainlogProcessorConfig({
             type: 'PARTN',
@@ -86,6 +87,7 @@ async function main() {
             concurrency: 2,
             hardCap: 4000,
             target: 500,
+            range:10
         }),
     }
 
