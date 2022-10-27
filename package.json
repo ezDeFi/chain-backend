@@ -15,11 +15,12 @@
     "@trop/gear": "^0.4.2",
     "assisted-json-rpc-provider": "git+ssh://git@github.com:launchzone/AssistedJsonRpcProvider.git",
     "bsc_util": "^0.4.0",
+    "caching-map": "^1.0.2",
     "ethers": "^5.1.4",
     "json-stable-stringify": "^1.0.1",
     "jsondiffpatch": "^0.4.1",
-    "node-fetch": "2",
-    "mongoose": "^5.7.6"
+    "mongoose": "^5.7.6",
+    "node-fetch": "2"
   },
   "devDependencies": {
     "mocha": "^6.2.2"
