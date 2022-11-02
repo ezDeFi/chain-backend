@@ -96,6 +96,8 @@ async function main() {
         mongoose: mongoose,
         processorConfigs,
         safeDepth: 4,
+        blockTimestampCacheSize: 4096,
+        blockTimeStampInterpolatingRange: 1024,
     })
 }
 

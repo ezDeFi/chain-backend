@@ -825,6 +825,11 @@ bson@^1.1.1, bson@~1.1.1:
   resolved "https://registry.npmjs.org/bson/-/bson-1.1.1.tgz"
   integrity sha512-jCGVYLoYMHDkOsbwJZBCqwMHyH4c+wzgI9hG7Z6SZJRXWr+x58pdIbm2i9a/jFGCkRJqRUr8eoI7lDWa0hTkxg==
 
+caching-map@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/caching-map/-/caching-map-1.0.2.tgz#8fab616b5ffdf11d958a20b5bfcaf7de7ddab6e8"
+  integrity sha512-vVdlJ9bypaoMOYiLHiBibMVmpt4oLWtyNW0n9UuGVkg7rIqejsPgJjHdjd8DyjaCHOgzdalLqS60dHtZMBIOyg==
+
 camelcase@^5.0.0:
   version "5.3.1"
   resolved "https://registry.npmjs.org/camelcase/-/camelcase-5.3.1.tgz"
