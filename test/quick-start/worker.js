@@ -59,7 +59,7 @@ function createConsumer(config) {
 async function main() {
     let mongoose = await createMongoose()
     let provider = new AssistedJsonRpcProvider(
-        new JsonRpcProvider('https://bsc-dataseed.binance.org'),
+        new JsonRpcProvider('https://bsc-mainnet.nodereal.io/v1/eb8693749b3e481781d8ab685c3b9c3c'),
         {
             rateLimitCount: 5,
             rateLimitDuration: 1000,
